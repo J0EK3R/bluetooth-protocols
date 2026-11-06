@@ -4,7 +4,7 @@ Descriptions of the radio / Bluetooth protocols of devices supported by [BrickCo
 
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
-All devices described here are controlled via BLE advertising without pairing. Their telegrams contain a 2-byte app identifier, which **none of the receivers evaluates** – any receiver in range reacts to every matching telegram.
+All devices described here are controlled via BLE advertising. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which **none of these receivers evaluates** – there is no pairing, any receiver in range reacts to every matching telegram. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
 
 ## Contents
 
@@ -38,6 +38,12 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 | [PowerBox/A-Series.md](PowerBox/A-Series.md) | A Series | 4 analog (nibble) | `A4…5B` / `40…BF` |
 | [PowerBox/M-Battery.md](PowerBox/M-Battery.md) | M Battery | 1 analog (special byte, sent twice) | `A4…5B` / `40…BF` |
 
+### CaDA
+
+| Document | Device | Channels | Notes |
+|---|---|---|---|
+| [CaDA/RaceCar.md](CaDA/RaceCar.md) | RaceCar (Rev1 and Rev2) | throttle, steering (byte), front/rear lights | Rev1: CaDA encryption + XN297L frame (address "CAR") on BLE channel 38; Rev2: plain manufacturer data; pairing via app identifier |
+
 ### Chips
 
 | Document | Chip |
@@ -49,6 +55,9 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 ```
 .
 ├── README.md
+├── CaDA/
+│   ├── RaceCar.md
+│   └── img/
 ├── Chips/
 │   └── XN297L.md
 ├── JieStar/
@@ -77,4 +86,4 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 
 ## Image credits
 
-The device images in `*/img/*_image.png` (Mould King, JIESTAR, PowerBox) are taken from [BrickController2](https://github.com/J0EK3R/brickcontroller2) (`BrickController2/UI/Images`), © István Murvai, Vít Německý and Contributors, MIT License.
+The device images in `*/img/*_image.png` (Mould King, JIESTAR, PowerBox, CaDA) are taken from [BrickController2](https://github.com/J0EK3R/brickcontroller2) (`BrickController2/UI/Images`), © István Murvai, Vít Německý and Contributors, MIT License.
