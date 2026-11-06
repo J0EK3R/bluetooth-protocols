@@ -88,8 +88,8 @@ The device slot (Device 1, 2 or 3) of an MK6.0 receiver is selected with the **p
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0x6D` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -107,8 +107,8 @@ Compared to the MK4.0 (`AD … 80 80 80 4F 52`) the bytes 3 … 6 are all `0x80`
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x61` / `0x62` / `0x63` | telegram identifier (start) = Device 1 / 2 / 3 |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `CH0` | channel 0 / port A |
 | 4 | `CH1` | channel 1 / port B |
 | 5 | `CH2` | channel 2 / port C |
@@ -171,7 +171,8 @@ Neutral Command telegram for Device 1: `61 <AppId0> <AppId1> 80 80 80 80 80 80 9
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain the same **2-byte app identifier** as for the MK4.0 (random, generated on first launch, stored in the app settings; placeholder `APPID = 0x00` in the source code is replaced when the device is created).
-- Whether the MK6.0 evaluates these bytes is **not known**. For the MK4.0 they are ignored. If the MK6.0 behaves the same, two phones controlling the same device slot nearby will interfere with each other.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK6.0 telegram in range on its selected device slot.
+- Consequence: two phones controlling MK6.0 receivers with the same device slot nearby will interfere with each other.
 
 ---
 
@@ -412,7 +413,6 @@ The BC2 image shows the board in a transparent housing with six output connector
 
 - Meaning of the constant bytes `80 80 80 80` in the Connect telegram.
 - Whether mode selection (first telegram after power-on) and the failsafe timeout (≈ 2 s) behave as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Whether the receiver uses the full 8-bit resolution or quantises internally (e.g. dead band around `0x80`).
 - Hardware details (section 8).
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).

@@ -29,7 +29,7 @@ The MK3.8 uses the same radio layer as the other MK modules: the phone builds th
 | Channels | 4 per device, 3 devices | **4 analog + 1 left/right**, 1 device |
 | Channel resolution | nibble, 7 steps per direction | nibble, **7 reverse / 6 forward** steps |
 | Neutral nibble | `0x8` | **`0x9`** |
-| App identifier | 2 bytes | **only 1 byte** in the Command telegram (offset 2 = port E) |
+| App identifier | 2 bytes (ignored) | **only 1 byte** in the Command telegram (offset 2 = port E), ignored as well |
 | Connect telegram | `AD … 80 80 80 4F 52` | `B1 … 80 80 80 4F C1` |
 | Command identifiers | `7D` / `82` | `81` / `C2` |
 | Start/end complement | yes (`+ = 0xFF`) | **no** (`0xB1`/`0xC1`, `0x81`/`0xC2`) |
@@ -72,8 +72,8 @@ Mode selection (first telegram after power-on wins) and a failsafe timeout are d
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xB1` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -89,7 +89,7 @@ Bytes 3 … 6 are the same as in the MK4.0/MK5.0 Connect telegram (`80 80 80 4F`
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x81` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
 | 2 | `0 │ E` | **port E** (left/right) in the low nibble, high nibble `0` – replaces `AppId[1]` |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
@@ -147,7 +147,8 @@ Port E is not proportional – there are only three states.
 
 - The Connect telegram contains the full **2-byte app identifier** (bytes 1 and 2).
 - In the Command telegram only `AppId[0]` is sent (byte 1); byte 2 carries port E. BC2 explicitly overwrites `AppId[1]` with `0x00` in the constructor (*This is an exception – the second byte of the AppIdentifier is used as setvalue for channel 5*).
-- Whether the MK3.8 evaluates the app identifier is **not known**.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK3.8 telegram in range.
+- Consequence: two phones controlling MK3.8 receivers nearby will interfere with each other.
 
 ---
 
@@ -393,6 +394,5 @@ No board analysis yet. The BC2 image shows a small brick-built module with a pus
 - Why the neutral nibble is `0x9` and the forward range has only 6 steps; whether `0x8` means anything to the receiver.
 - Physical meaning of port E (left/right) – e.g. steering or indicators.
 - Whether mode selection and the failsafe timeout behave as on the MK4.0.
-- Whether the receiver evaluates the app identifier byte(s).
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).
 - Hardware details (section 8).

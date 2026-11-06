@@ -72,8 +72,8 @@ Mode selection (first telegram after power-on wins) and a failsafe timeout are d
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xAA` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `0x00` | constant (meaning unknown) |
 | 4 | `0x00` | constant (meaning unknown) |
 | 5 | `0x00` | constant (meaning unknown) |
@@ -89,8 +89,8 @@ Start and end identifier are bitwise complements: `0xAA + 0x55 = 0xFF`. Unlike M
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x66` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `CH0` | channel 0 / port A, analog byte |
 | 4 | `CH1` | channel 1 / port B, analog byte |
 | 5 | `F` | function byte (ports C and D) |
@@ -149,7 +149,8 @@ Ports C and D are **on/off** functions. In BC2 they are *virtual* channels: they
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain the same **2-byte app identifier** as for the other MK modules (random, generated on first launch, stored in the app settings).
-- Whether the MK3.0 evaluates these bytes is **not known**. For the MK4.0 they are ignored.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK3.0 telegram in range.
+- Consequence: two phones controlling MK3.0 receivers nearby will interfere with each other.
 
 ---
 
@@ -396,6 +397,5 @@ No board analysis yet. The BC2 image shows a small brick-built module with a pus
 - Whether the function outputs are real on/off outputs or could also be driven proportionally.
 - Physical meaning of ports A … D (BC2 icons suggest steering, drive and two functions).
 - Whether mode selection and the failsafe timeout behave as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).
 - Hardware details (section 8).

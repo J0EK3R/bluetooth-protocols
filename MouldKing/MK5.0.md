@@ -73,8 +73,8 @@ Mode selection (first telegram after power-on wins) and a failsafe timeout are d
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xAD` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -90,8 +90,8 @@ Identical to the [MK4.0 Connect telegram](MK4.0.md#2-connect-telegram-8-bytes-ra
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x7D` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `AB │ T` | channel 0 = drive (high nibble), channel 1 = turret rotation (low nibble) |
 | 4 | `C │ AB+T` | channel 2 = canon shot (high nibble), channel 3 = turn on the spot (low nibble) |
 | 5 … 8 | `0x80` | constant |
@@ -164,7 +164,8 @@ Any value ≠ 0 fires, the sign is ignored.
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain the same **2-byte app identifier** as for the other MK modules (random, generated on first launch, stored in the app settings).
-- Whether the MK5.0 evaluates these bytes is **not known**. For the MK4.0 they are ignored.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK5.0 telegram in range.
+- Consequence: two phones controlling MK5.0 receivers nearby will interfere with each other.
 
 ---
 
@@ -410,6 +411,5 @@ No board analysis yet. The BC2 image shows a brick-built battery/receiver box wi
 - Why the turret lock is encoded as nibble `0x2` – this value is "reverse, step 2" on the analog scale.
 - Whether the canon shot is triggered on the edge (`0x0` → `0xF`) or as long as `0xF` is sent.
 - Whether mode selection and the failsafe timeout behave as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).
 - Hardware details (section 8).

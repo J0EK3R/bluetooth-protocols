@@ -48,8 +48,8 @@ Identical to the [A Series Connect telegram](A-Series.md#2-connect-telegram-8-by
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `M` | channel 0 / output, see 3.1 |
 | 4 | `M` | **same value as offset 3** |
 | 5 | `0x00` | constant |

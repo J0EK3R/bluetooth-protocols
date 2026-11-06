@@ -83,8 +83,8 @@ Mode selection and a failsafe timeout are documented for the [MK4.0](../MouldKin
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xA4` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 … 6 | `0x80` | constant (meaning unknown) |
 | 7 | `0x5B` | telegram identifier (end) |
 
@@ -97,8 +97,8 @@ The Connect telegram is the same for all three device slots (only the whitening 
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
 | 5 | `0x80` | constant |
@@ -144,7 +144,8 @@ The raw telegram is the same for Device 1, 2 and 3.
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier** (random, generated on first launch, stored in the app settings, managed by `JieStarDeviceManager`).
-- Whether the SCM4 evaluates these bytes is **not known**.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every SCM4 telegram in range on its selected device slot.
+- Consequence: two phones controlling SCM4 receivers with the same device slot nearby will interfere with each other.
 
 ---
 
@@ -403,6 +404,5 @@ No board analysis yet. The BC2 image shows a flat module with four output connec
 - How the device slot (BLE channel) is selected on the receiver.
 - Meaning of the constant bytes `80 80 80 80` (Connect) and `80 80` (Command, offsets 5 and 6).
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Interference with the [PowerBox](../PowerBox/A-Series.md) modules, which use the same identifiers `A4 … 5B` / `40 … BF`.
 - Hardware details (section 8).

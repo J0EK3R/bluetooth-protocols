@@ -74,8 +74,8 @@ Mode selection and a failsafe timeout are documented for the [MK4.0](../MouldKin
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xA4` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -91,8 +91,8 @@ Identical for A Series and [M Battery](M-Battery.md). Start and end identifier a
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
 | 5 | `0x00` | constant |
@@ -132,7 +132,8 @@ else      →  nibble = 0x0                            // stop
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier** (random, generated on first launch, stored in the app settings, managed by `PowerBoxDeviceManager`).
-- Whether the A Series evaluates these bytes is **not known**.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every PowerBox telegram in range.
+- Consequence: two phones controlling PowerBox receivers nearby will interfere with each other.
 
 ---
 
@@ -368,6 +369,5 @@ No board analysis yet. The BC2 image shows a flat module with four output connec
 - Meaning of the constant bytes `80 80 80 00` (Connect) and `00 00` (Command, offsets 5 and 6).
 - Interference with a [JIESTAR SCM4](../JieStar/SCM4.md) receiver (Device 1 slot, channel 37): identical identifiers, only the constant bytes differ.
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Whether more than one A Series can be addressed (device slots).
 - Hardware details (section 8).

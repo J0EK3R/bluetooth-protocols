@@ -70,8 +70,8 @@ Mode selection and a failsafe timeout are documented for the [MK4.0](../MouldKin
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xA4` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 … 6 | `0x00` | constant (meaning unknown) |
 | 7 | `0x5B` | telegram identifier (end) |
 
@@ -84,8 +84,8 @@ Same identifiers as the SCM4 Connect telegram, but with `0x00` instead of `0x80`
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x41` / `0x42` / `0x43` | telegram identifier (start) = Device 1 / 2 / 3 |
-| 1 | `AppId[0]` | app identifier byte 0 |
-| 2 | `AppId[1]` | app identifier byte 1 |
+| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C, channel 3 / port D |
 | 5 | `E │ F` | channel 4 / port E, channel 5 / port F |
@@ -133,7 +133,8 @@ else      →  nibble = 0x0                            // stop
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier** (random, generated on first launch, stored in the app settings, managed by `JieStarDeviceManager`).
-- Whether the SCM8 evaluates these bytes is **not known**.
+- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every SCM8 telegram in range on its selected device slot.
+- Consequence: two phones controlling SCM8 receivers with the same device slot nearby will interfere with each other.
 
 ---
 
@@ -380,6 +381,5 @@ No board analysis yet. The BC2 image shows a black module with eight output conn
 - Meaning of the constant bytes `00 00 00 00` in the Connect telegram.
 - How the device slot is selected on the receiver.
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
-- Whether the receiver evaluates the app identifier bytes.
 - Interaction with an [SCM4](SCM4.md) or [PowerBox](../PowerBox/A-Series.md) receiver in range: the Connect identifiers `A4 … 5B` are shared.
 - Hardware details (section 8).

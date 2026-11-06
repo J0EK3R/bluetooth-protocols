@@ -4,6 +4,8 @@ Descriptions of the radio / Bluetooth protocols of devices supported by [BrickCo
 
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
+All devices described here are controlled via BLE advertising without pairing. Their telegrams contain a 2-byte app identifier, which **none of the receivers evaluates** – any receiver in range reacts to every matching telegram.
+
 ## Contents
 
 ### Mould King
