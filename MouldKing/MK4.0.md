@@ -1,7 +1,11 @@
 # Mould King MK4.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK4.cs`, `MKBaseNibble.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs` and the corresponding unit tests.
-> Last updated: 2026-11-01
+> Last updated: 2026-11-06
+
+<img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="180">
+
+*Image: BrickController2 (`UI/Images/mk4_image.png`, MIT License).*
 
 ## Overview
 
@@ -82,7 +86,7 @@ The device slot (Device 1, 2 or 3) of an MK4.0 receiver is selected with the **p
 
 **Purpose:** selects Bluetooth mode (app control) on a freshly powered-on receiver that has not yet received any telegrams. It does not pair the receiver with the app. Once a mode is selected, it only changes after a power cycle (see section 1).
 
-The Connect telegram is identical to that of the MK5.0.
+The Connect telegram is identical to that of the [MK5.0](MK5.0.md#2-connect-telegram-8-bytes-raw). The MK5.0 also uses the same Command identifiers `7D` / `82` (see [MK5.0 §9](MK5.0.md#9-open-questions)).
 
 ## 3. Command telegram (10 bytes, raw)
 
@@ -110,7 +114,7 @@ channel 0 = port A, 1 = port B, 2 = port C, 3 = port D
 
 All three devices share **one** telegram. In BrickController2 it is therefore static (`SharedTelegram`): whoever controls Device 2 always transmits the values of Device 1 and 3 as well.
 
-Notably, the start and end identifiers are bitwise complements of each other: `0xAD + 0x52 = 0xFF`, `0x7D + 0x82 = 0xFF`. The same holds for other MK modules (e.g. MK6.0: `0x6D`/`0x92`).
+Notably, the start and end identifiers are bitwise complements of each other: `0xAD + 0x52 = 0xFF`, `0x7D + 0x82 = 0xFF`. The same holds for most other MK modules (e.g. [MK6.0](MK6.0.md): `0x6D`/`0x92`, [MK3.0](MK3.0.md): `0xAA`/`0x55`), but not for the [MK3.8](MK3.8.md) (`0xB1`/`0xC1`).
 
 ### 3.1 Channel value (nibble)
 
@@ -411,6 +415,10 @@ CRC16 of the Connect telegram above: `0xABD3`.
 
 ## 8. Hardware (receiver board)
 
+<img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="240">
+
+The BC2 image shows the module housing with the port labels **B** (top left), **C** (top right), **A** (bottom left) and **D** (bottom right), the four output connectors next to them and a Micro-USB socket in the center.
+
 Based on photos of the receiver board. Part identifications from SMD markings are best guesses unless stated otherwise.
 
 ### 8.1 Board
@@ -453,4 +461,5 @@ The 16 MHz crystal matches the reference clock of XN297L-class transceivers, whi
 - Exact duration of the failsafe timeout (approx. 2 s).
 - Exact part numbers of the RF chip (`2148dMC`) and the `CC1130T` IC.
 - Function of the white battery wire (`3.7V` mid tap?) and the test pads on the back.
+- Interference with the [MK5.0](MK5.0.md), which uses identical Connect and Command identifiers.
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).

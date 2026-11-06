@@ -1,7 +1,11 @@
 # Mould King MK6.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK6.cs`, `MKBaseByte.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs`, the platform `MKPlatformService.cs` files and `MouldKingMK6DatagramTests.cs`.
-> Last updated: 2026-11-01
+> Last updated: 2026-11-06
+
+<img src="img/mk6_image.png" alt="Mould King MK6.0 module" height="180">
+
+*Image: BrickController2 (`UI/Images/mk6_image.png`, MIT License).*
 
 ## Overview
 
@@ -397,6 +401,10 @@ The first 8 encoded bytes (preamble + address) are identical for all MK telegram
 ## 8. Hardware
 
 No board analysis yet. To be added (board name, RF chip, motor drivers, power supply). The push button and LED are used for device selection (see section 1.2).
+
+The BC2 image shows the board in a transparent housing with six output connectors (three on each side) and a USB socket at the bottom.
+
+<img src="img/mk6_image.png" alt="Mould King MK6.0 module" height="300">
 
 ---
 
