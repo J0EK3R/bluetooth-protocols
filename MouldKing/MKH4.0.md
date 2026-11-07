@@ -11,8 +11,8 @@
 
 | Property | Value |
 |---|---|
-| Device | Mould King MKH4.0 hub (e.g. from the 2D plotter set), shown as hardware `H4.0` in the original app |
-| Transport | **BLE GATT connection** – unlike all other Mould King modules in this repository, no advertising telegrams |
+| Device | Mould King MKH4.0 hub, shown as hardware `H4.0` in the original app |
+| Transport | **BLE GATT connection** |
 | Direction | bidirectional: commands on `0xAE3B`, responses / notifications on `0xAE3C` |
 | Scan identification | 16-bit service UUID `0xAF30` in the advertisement + non-empty device name |
 | Ports | 4 (A, B, C, D) |
@@ -25,22 +25,22 @@ The protocol is a plain ASCII command protocol on top of a "serial port" style G
 
 ### Sets with the MKH4.0
 
-The following models can be selected in the **MK+ app** (Mould King app for the MKH motors) and contain the MKH4.0. Names and piece counts come from the Mould King online store and from the [Merlins Bricks SetDB](https://www.merlinsbricks.com/setdb/eol/brand/mouldking/) (as of 2026-11).
+The following models can be selected in the **MK+ app** (Mould King app for the MKH motors) and contain the MKH4.0. Names and piece counts come from the Mould King online store and from the [Merlins Bricks SetDB](https://www.merlinsbricks.com/setdb/eol/brand/mouldking/) (as of 2026-11). Images: Mould King online store (product photos, © Mould King); 17025: MK+ app.
 
-| Model | Name | Pieces | Mould King | SetDB / other |
-|---|---|---|---|---|
-| 10159 | Cyberpunk Mechanical Clock | 3,181 | [mouldkingcorp.com](https://mouldkingcorp.com/products/10159-cyberpunk-mechanical-clock) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-10159/) |
-| 10160 | Motorized Mechanical Gear Clock | 3,675 | [mouldkingcorp.com](https://mouldkingcorp.com/products/10160-motorized-mechanical-gear-clock-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-10160) |
-| 17007 | Liebherr LTM 11200 mobile crane (white) | 8,506 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17007-liebherr-11200-mobile-crane) | – |
-| 17008 | Liebherr LTM 11200 mobile crane (red) | 8,506 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17007-liebherr-11200-mobile-crane) (same page as 17007) | – |
-| 17025 | *unknown* | – | listed only in the [FAQ](https://mouldkingcorp.com/pages/help) as a model that requires MK Plus | – |
-| 17047 | Mechanical Crane C+ (mobile crane) | 2,688 | [Cranes collection](https://mouldkingcorp.com/collections/cranes) | [brickmo](https://www.brickmo.com/en/thematic-world/vehicles/64164/mould-king-remote-control-crane-c-17047?c=6089) |
-| 17048 | Liebherr R 9800 mining excavator, 2023 | 4,468 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17048-ultimate-edition-excavator) (currently shows the 17070 content) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17048/) |
-| 17049 | Liebherr PR766 bulldozer | 3,568 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17049-ultimate-edition-bulldozer) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17049/) |
-| 17062 | Demolition excavator | 4,195 | [mouldkingcorp.com](https://mouldkingcorp.com/products/17062-rc-demolition-excavator-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17062) |
-| 17070 | Liebherr R 9800 mining excavator / heavy-duty excavator, 2024 (variant of 17048) | 4,767 | [mouldkingcorp.com](https://mouldkingcorp.com/products/liebherr-r-9800-mining-excavator) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17070/) |
-| 17071 | Heavy-duty excavator, 2024 (variant of 17048 / 17070) | 4,767 | – | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17071/) |
-| 17075 | LTM 1110 crane truck (white) | 3,248 | [mouldkingcorp.com](https://mouldkingcorp.com/products/17075-remote-controlled-ltm-1110-crane-truck-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17075/) |
+| Model | Image | Name | Pieces | Mould King | SetDB / other |
+|---|---|---|---|---|---|
+| 10159 | <img src="img/mkh4_set_10159.png" alt="Mould King 10159" width="80"> | Cyberpunk Mechanical Clock | 3,181 | [mouldkingcorp.com](https://mouldkingcorp.com/products/10159-cyberpunk-mechanical-clock) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-10159/) |
+| 10160 | <img src="img/mkh4_set_10160.png" alt="Mould King 10160" width="80"> | Motorized Mechanical Gear Clock | 3,675 | [mouldkingcorp.com](https://mouldkingcorp.com/products/10160-motorized-mechanical-gear-clock-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-10160) |
+| 17007 | <img src="img/mkh4_set_17007.png" alt="Mould King 17007" width="80"> | Liebherr LTM 11200 mobile crane (white) | 8,506 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17007-liebherr-11200-mobile-crane) | – |
+| 17008 | <img src="img/mkh4_set_17008.png" alt="Mould King 17008" width="80"> | Liebherr LTM 11200 mobile crane (red) | 8,506 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17007-liebherr-11200-mobile-crane) (same page as 17007) | – |
+| 17025 | <img src="img/mkh4_set_17025.png" alt="Mould King 17025" width="80"> | Excavator (white, name and image as listed in the MK+ app) | – | listed only in the [FAQ](https://mouldkingcorp.com/pages/help) as a model that requires MK Plus | – |
+| 17047 | <img src="img/mkh4_set_17047.png" alt="Mould King 17047" width="80"> | Mechanical Crane C+ (mobile crane) | 2,688 | [mouldkingcorp.com](https://mouldkingcorp.com/products/17047-mechanical-crane) | [brickmo](https://www.brickmo.com/en/thematic-world/vehicles/64164/mould-king-remote-control-crane-c-17047?c=6089) |
+| 17048 | <img src="img/mkh4_set_17048.png" alt="Mould King 17048" width="80"> | Liebherr R 9800 mining excavator (white), 2023 | 4,468 | [mouldkingcorp.com](https://mouldkingcorp.com/products/liebherr-r-9800-mining-excavator) (the 17048 page redirects to the 17070 page) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17048/) |
+| 17049 | <img src="img/mkh4_set_17049.png" alt="Mould King 17049" width="80"> | Liebherr PR766 bulldozer | 3,568 | [mouldkingcorp.com](https://mouldkingcorp.com/products/mould-king-17049-ultimate-edition-bulldozer) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17049/) |
+| 17062 | <img src="img/mkh4_set_17062.png" alt="Mould King 17062" width="80"> | Demolition excavator | 4,195 | [mouldkingcorp.com](https://mouldkingcorp.com/products/17062-rc-demolition-excavator-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17062) |
+| 17070 | <img src="img/mkh4_set_17070.png" alt="Mould King 17070" width="80"> | Liebherr R 9800 mining excavator (yellow), 2024 (variant of 17048) | 4,767 | [mouldkingcorp.com](https://mouldkingcorp.com/products/liebherr-r-9800-mining-excavator) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17070/) |
+| 17071 | <img src="img/mkh4_set_17071.png" alt="Mould King 17071" width="80"> | Liebherr R 9800 mining excavator (red), 2024 (variant of 17048 / 17070) | 4,767 | [mouldkingcorp.com](https://mouldkingcorp.com/products/liebherr-r-9800-mining-excavator) (same page as 17070) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17071/) |
+| 17075 | <img src="img/mkh4_set_17075.png" alt="Mould King 17075" width="80"> | LTM 1110 crane truck (white) | 3,248 | [mouldkingcorp.com](https://mouldkingcorp.com/products/17075-remote-controlled-ltm-1110-crane-truck-building-set) | [Merlins Bricks](https://www.merlinsbricks.com/sets/mou-17075/) |
 
 Notes:
 
@@ -418,7 +418,7 @@ No board analysis yet. Four motor ports (A–D) with encoder support for Mould K
 
 ## 8. Open questions
 
-- Name of model 17025, and whether 17036, 17044 and 13181 (MK Plus models according to the Mould King FAQ) also contain the MKH4.0.
+- Full name and piece count of model 17025 (only "excavator" in the MK+ app), and whether 17036, 17044 and 13181 (MK Plus models according to the Mould King FAQ) also contain the MKH4.0.
 - Meaning of the handshake payload `AABB` (command `1`) and whether it acts as an app identifier.
 - Meaning of command `F` (payload `1`).
 - Meaning of the flag digit in front of each speed in command `4` (`0` vs. `1`).
