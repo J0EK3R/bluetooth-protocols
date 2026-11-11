@@ -51,7 +51,7 @@ Main consequences (all **[I]**, see section 5): a phone **cannot emulate the han
 ### 3.1 Modulation
 
 - Both paths use 1 Mbps GFSK. The handset signal was received with the nRF52840 in `Nrf_1Mbit` mode **[C]**. BLE legacy advertising is always on the LE 1M PHY **[I]**.
-- The frequency deviation is not necessarily identical: the XN297L deviation is configurable (160 - 250 kHz, see [XN297L](../Chips/XN297L.md)), BLE 1M uses a nominal deviation of 250 kHz. About 6 - 10 % of the handset bind telegrams fail the CRC in the sniffer, systematically, which points to a demodulation mismatch ([MK4.0 Remote §2.1](MK4.0-Remote.md#21-timing)) **[C]**. Whether this is related to deviation differences is **not verified [I]**.
+- The frequency deviation is not necessarily identical: the XN297L deviation is configurable (160 - 250 kHz, see [XN297L](../Chips/XN297L.md)), BLE 1M uses a nominal deviation of 250 kHz (Bluetooth Core Specification, general knowledge, not verified here **[I]**). About 6 - 10 % of the handset bind telegrams fail the CRC in the sniffer, systematically, which points to a demodulation mismatch ([MK4.0 Remote §2.1](MK4.0-Remote.md#21-timing)) **[C]**. Whether this is related to deviation differences is **not verified [I]**.
 
 ### 3.2 Frequency
 
@@ -61,8 +61,8 @@ Main consequences (all **[I]**, see section 5): a phone **cannot emulate the han
 | Operation | 2423, 2441, 2458, 2466 MHz, hopping (order and dwell not determined) | 2402 MHz |
 
 - The app frequency follows from the BLE whitening seed `0x25` (= 37) in BC2; "advertising channel 37 = 2402 MHz" is an **interpretation [I]** (the code does not say so, but it explains all constants, see [MK4.0 §5.1](MK4.0.md#51-constants-mkprotocol)). Which of the three advertising channels the phone uses is not under the app's control; only channel 37 carries a frame that decodes (section 3.12).
-- BLE channel centres are **even** MHz (2402 + 2n). Of the handset channels, **2411, 2423 and 2441 MHz are not BLE channel frequencies at all**; 2458 and 2466 MHz are BLE **data** channels (26 and 30), which a phone cannot use for legacy advertising. The handset bind channel is odd (2411 MHz). So no handset channel is an advertising channel, see conclusion 2 in section 5 **[I]**.
-- Weak copies of the handset frames on 2442, 2450, 2474 and 2482 MHz are most likely adjacent-channel / image reception **[C]** (interpretation in [MK4.0 Remote §2](MK4.0-Remote.md#2-radio-parameters)); they are not drawn in diagram B.
+- BLE channel centres are **even** MHz (2402 + 2n). Of the handset channels, **2411, 2423 and 2441 MHz are not BLE channel frequencies at all**; 2458 and 2466 MHz are BLE **data** channels (26 and 30), which a phone cannot use for legacy advertising (legacy advertising is limited to channels 37/38/39; the secondary channels of BLE 5 extended advertising are not under the app's control). The handset bind channel is odd (2411 MHz). So no handset channel is an advertising channel, see conclusion 2 in section 5 **[I]**.
+- Weak copies of the handset frames on 2442, 2450, 2474 and 2482 MHz were seen **[C]**; they are most likely adjacent-channel / image reception **[I]** ([MK4.0 Remote §2](MK4.0-Remote.md#2-radio-parameters)); they are not drawn in diagram B.
 
 ### 3.3 Preamble
 
@@ -270,7 +270,7 @@ print(hexs(build_frame([0xC1, 0xC2, 0xC3, 0xC4, 0xC5], [0x7D, 0x7B, 0xA7] + [0x8
 All conclusions are **interpretations [I]**; none was tested with a receiver.
 
 1. **The receiver is dual-mode.** After power-on it must listen at least on 2402 MHz with the app address and on 2411 MHz with the bind address, and then locks its XN297L configuration to the first source it hears. *Evidence:* the two sources use different frequencies and addresses, yet either can start a freshly powered receiver ([MK4.0 §1](MK4.0.md#1-sequence)). *Would be refuted by:* a receiver that reacts to the app frame only after the handset frequencies have been scanned in a fixed order that never includes 2411 MHz (no such case known).
-2. **A phone cannot emulate the handset.** BLE legacy advertising is limited to 2402, 2426 and 2480 MHz, and BLE channel centres are even MHz; the handset bind channel 2411 MHz and the operation channels 2423 and 2441 MHz are not BLE channel frequencies, 2458 and 2466 MHz are only BLE data channels. *Would be refuted by:* a receiver that also accepts the handset-format frame on 2402 MHz (cross test, section 6).
+2. **A phone cannot emulate the handset.** BLE legacy advertising is limited to 2402, 2426 and 2480 MHz, and BLE channel centres are even MHz; the handset bind channel 2411 MHz and the operation channels 2423 and 2441 MHz are not BLE channel frequencies, 2458 and 2466 MHz are only BLE data channels (extended advertising uses data channels for secondary packets, but not under the app's control). The conclusion holds in any case because of the fixed odd-MHz bind channel 2411 MHz. *Would be refuted by:* a receiver that also accepts the handset-format frame on 2402 MHz (cross test, section 6).
 3. **An nRF24 / XN297L can send the app frame natively** on 2402 MHz without BLE, because the on-air frame is a plain XN297L frame **[D]** and the BLE header is not needed by the receiver. *Would be refuted by:* a receiver that checks for BLE structures in front of the preamble.
 4. **The receiver decodes both value formats** – the handset's 255-step bytes in handset mode, the app's 15-step nibbles in app mode (in each mode it uses the format of the mode it locked to). The handset values are finer than the app values.
 
