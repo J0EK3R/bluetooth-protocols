@@ -56,6 +56,13 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 |---|---|
 | [Chips/XN297L.md](Chips/XN297L.md) | Panchip XN297L 2.4 GHz GFSK transceiver (frame format, scrambler, CRC, BLE emulation) |
 
+### Tools
+
+| Folder | Tool |
+|---|---|
+| [Tools/nrf-sniffer-ble](Tools/nrf-sniffer-ble/README.md) | nRF Sniffer for Bluetooth LE on the nRF52840 MDK USB Dongle: firmware backup and installation of the Wireshark capture tool – for BLE advertising and GATT connections |
+| [Tools/xn297l-sniffer](Tools/xn297l-sniffer/README.md) | XN297L sniffer: firmware for the nRF52840 MDK USB Dongle, Wireshark extcap and Lua dissector – receives XN297L frames (e.g. from original remote controls) and decodes address, payload and CRC |
+
 ## Repository layout
 
 ```
@@ -74,6 +81,9 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 │   ├── A-Series.md
 │   ├── M-Battery.md
 │   └── img/
+├── Tools/
+│   ├── nrf-sniffer-ble/ # nRF Sniffer for Bluetooth LE: firmware backup, installation notes
+│   └── xn297l-sniffer/  # nRF52840 dongle firmware, Wireshark extcap + Lua dissector
 └── MouldKing/
     ├── MK3.0.md
     ├── MK3.8.md

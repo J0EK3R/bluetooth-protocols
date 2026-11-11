@@ -1,0 +1,4 @@
+UF2 Bootloader 0.2.13-42-g82464f9-dirty lib/nrfx (v2.0.0) lib/tinyusb (legacy-1500-g23df777b) s140 6.1.1
+Model: nRF52840 MDK USB Dongle
+Board-ID: nRF52840-Dongle-v1
+Date: Feb  3 2020

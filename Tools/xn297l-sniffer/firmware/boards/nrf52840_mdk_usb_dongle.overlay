@@ -1,0 +1,12 @@
+/*
+ * Board overlay for the nRF52840 MDK USB Dongle.
+ *
+ * Adds a CDC ACM UART instance on the USB device controller.
+ * The firmware talks to the host exclusively through this virtual COM port.
+ */
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
