@@ -22,6 +22,8 @@
 
 The MK4.0 receiver is not a real BLE device but a 2.4 GHz radio receiver (XN297L-like). The phone therefore builds the advertising data so that, *after* BLE whitening, it looks exactly like an XN297L packet on air. This is why the raw telegrams from sections 2 and 3 are not visible directly; they are encoded as described in section 5.
 
+Comparison with the original 2.4 GHz handset (layer by layer, with example frames): [MK4.0 Remote vs. BLE](MK4.0-Remote-vs-BLE.md).
+
 ---
 
 ## 1. Sequence

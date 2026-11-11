@@ -4,13 +4,13 @@ Descriptions of the radio / Bluetooth protocols of remote-controlled building-bl
 
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
-All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising; the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which **none of these receivers evaluates** – there is no pairing, any receiver in range reacts to every matching telegram. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
+All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which **none of these receivers evaluates** – there is no pairing, any receiver in range reacts to every matching telegram. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
 
 ## Contents
 
 ### Mould King
 
-The Mould King modules in the first table are controlled via **BLE advertising**: the app encodes its telegrams so that an XN297L-compatible 2.4 GHz frame appears on air (see [XN297L](Chips/XN297L.md)).
+The Mould King modules in the first table (except the MK4.0 handset, which transmits native XN297L frames) are controlled via **BLE advertising**: the app encodes its telegrams so that an XN297L-compatible 2.4 GHz frame appears on air (see [XN297L](Chips/XN297L.md)).
 
 | Document | Device | Channels | Connect / Command identifiers |
 |---|---|---|---|
@@ -20,6 +20,8 @@ The Mould King modules in the first table are controlled via **BLE advertising**
 | [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz |
 | [MouldKing/MK5.0.md](MouldKing/MK5.0.md) | MK5.0 tank module | drive, turret, shot, turn + turret lock | `AD…52` / `7D…82` (same as MK4.0) |
 | [MouldKing/MK6.0.md](MouldKing/MK6.0.md) | MK6.0 module | 6 analog (byte) × 3 devices, telegram per device | `6D…92` / `61…63` |
+
+Comparison of the original MK4.0 handset and the app: [MouldKing/MK4.0-Remote-vs-BLE.md](MouldKing/MK4.0-Remote-vs-BLE.md) – layer-by-layer comparison with side-by-side on-air example frames (shared XN297L frame layer, different frequency, address and telegram format).
 
 The MKH4.0 hub is a real BLE peripheral and is controlled via a **GATT connection**:
 
@@ -90,9 +92,11 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
     ├── MK3.8.md
     ├── MK4.0.md
     ├── MK4.0-Remote.md
+    ├── MK4.0-Remote-vs-BLE.md
     ├── MK5.0.md
     ├── MK6.0.md
     ├── MKH4.0.md
+    └── img/            # device images (PNG), SVG comparison tables (BLE packet vs. XN297L frame) and diagrams
     └── img/            # device images (PNG), board photos (JPEG) and SVG comparison tables (BLE packet vs. XN297L frame)
 ```
 

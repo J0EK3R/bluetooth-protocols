@@ -209,6 +209,8 @@ sniffer. They were reproduced bit-exactly with the reference model in
 
 ## 7. Comparison with app control (BLE)
 
+Layer-by-layer comparison with side-by-side example frames: [MK4.0 Remote vs. BLE](MK4.0-Remote-vs-BLE.md).
+
 | | Handset | App ([MK4.0](MK4.0.md)) |
 |---|---|---|
 | Transport | native XN297L-compatible frames | BLE advertising emulating an XN297L frame |
