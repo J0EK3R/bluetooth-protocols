@@ -412,12 +412,12 @@ The BC2 image shows the board in a transparent housing with six output connector
 <img src="img/mk6_housing_top.jpg" alt="Top view of the MK6.0 module through the transparent lid" height="360">
 <img src="img/mk6_housing_perspective.jpg" alt="Angled view of the MK6.0 module showing the housing shape" height="360">
 
-*Top view (left) and angled view (right) of the module with the lid on. Top view: Mould King logo at the top end, six output sockets (three per long side), push button and Micro-USB socket at the bottom edge, board label `JM6.0R` printed twice, `B+` / `B-` marks next to the USB socket. Angled view: housing shape, round brick-stud openings on the lid and round openings in the end wall. Own photos.*
+*Top view (left) and angled view (right) of the module with the lid on. Top view: Mould King logo at the top end, six output sockets (three per long side, each with two rows of 3 pins, counted on a sharper photo of the same module), push button and Micro-USB socket at the bottom edge, board label `JM6.0R` printed twice, `B+` / `B-` marks next to the USB socket. Angled view: housing shape, round brick-stud openings on the lid and round openings in the end wall. Own photos.*
 
 | Property | Value |
 |---|---|
 | Board label | `JM6.0R` (silkscreen, readable twice on the top side) |
-| Output connectors | 6 sockets, 3 on each long side, each with two parallel rows of pins; about 4 pins per row (about 8 per socket, exact count not certain through the lid) |
+| Output connectors | 6 sockets, 3 on each long side, each with two rows of 3 pins (6 per socket), counted on a sharper photo of the same module |
 | Pin assignment | not readable through the housing |
 | User interface | 1 push button at the bottom end (device selection, see section 1.2) |
 | LED / light pipe | not readable through the housing (a few small SMD parts next to the USB socket, function unknown) |
