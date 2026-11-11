@@ -97,7 +97,6 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
     ├── MK5.0.md
     ├── MK6.0.md
     ├── MKH4.0.md
-    └── img/            # device images (PNG), SVG comparison tables (BLE packet vs. XN297L frame) and diagrams
     └── img/            # device images (PNG), board photos (JPEG) and SVG comparison tables (BLE packet vs. XN297L frame)
 ```
 
@@ -114,4 +113,4 @@ The device images in `*/img/*_image.png` (Mould King, JIESTAR, PowerBox, CaDA) a
 
 The set images in `MouldKing/img/mkh4_set_*.png` are product photos from the Mould King online store ([mouldkingcorp.com](https://mouldkingcorp.com)), © Mould King, scaled down to 240 × 240 px. The image of 17025 is taken from the Mould King MK+ app.
 
-The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` and the housing photos `MouldKing/img/mk4_housing_*.jpg` are own photos of the repository author (cropped, scaled down, metadata removed).
+The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` and the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg` are own photos of the repository author (cropped, scaled down, metadata removed).

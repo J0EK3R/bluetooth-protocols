@@ -1,7 +1,7 @@
 # Mould King MK6.0 – Bluetooth Protocol
 
-> Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK6.cs`, `MKBaseByte.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs`, the platform `MKPlatformService.cs` files and `MouldKingMK6DatagramTests.cs`.
-> Last updated: 2026-11-06
+> Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK6.cs`, `MKBaseByte.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs`, the platform `MKPlatformService.cs` files and `MouldKingMK6DatagramTests.cs`; own photos of the module (section 8).
+> Last updated: 2026-11-11
 
 <img src="img/mk6_image.png" alt="Mould King MK6.0 module" height="180">
 
@@ -401,11 +401,32 @@ The first 8 encoded bytes (preamble + address) are identical for all MK telegram
 
 ## 8. Hardware
 
-No board analysis yet. To be added (board name, RF chip, motor drivers, power supply). The push button and LED are used for device selection (see section 1.2).
+The module has a transparent (smoke-grey) lid, so the board is visible from the top. The push button and LED are used for device selection (see section 1.2). Only what is visible through the lid is documented here; the lid has not been removed.
 
 The BC2 image shows the board in a transparent housing with six output connectors (three on each side) and a USB socket at the bottom.
 
 <img src="img/mk6_image.png" alt="Mould King MK6.0 module" height="300">
+
+### 8.1 Board and housing
+
+<img src="img/mk6_housing_top.jpg" alt="Top view of the MK6.0 module through the transparent lid" height="360">
+<img src="img/mk6_housing_perspective.jpg" alt="Angled view of the MK6.0 module showing the housing shape" height="360">
+
+*Top view (left) and angled view (right) of the module with the lid on. Top view: Mould King logo at the top end, six output sockets (three per long side, each with two rows of 3 pins, counted on a sharper photo of the same module), push button and Micro-USB socket at the bottom edge, board label `JM6.0R` printed twice, `B+` / `B-` marks next to the USB socket. Angled view: housing shape, round brick-stud openings on the lid and round openings in the end wall. Own photos.*
+
+| Property | Value |
+|---|---|
+| Board label | `JM6.0R` (silkscreen, readable twice on the top side) |
+| Output connectors | 6 sockets, 3 on each long side, each with two rows of 3 pins (6 per socket), counted on a sharper photo of the same module |
+| Pin assignment | not readable through the housing |
+| User interface | 1 push button at the bottom end (device selection, see section 1.2) |
+| LED / light pipe | not readable through the housing (a few small SMD parts next to the USB socket, function unknown) |
+| Charging | Micro-USB socket at the bottom end |
+| Battery | marks `B+` and `B-` next to the USB socket, with a third mark in between (not readable); three small pads in a row are visible in the angled view (interpretation: battery connection, as on the MK4.0) |
+| ICs | two larger multi-pin ICs (one in the upper half, one in the lower middle) and several smaller ones; markings not readable through the housing |
+| Other marks | a partly readable line of text near the bottom edge (starts with `HF-`, probably the board name, as on the MK4.0); the rest is not readable |
+
+The lid carries round openings (brick-stud style) above the board and the end walls have round openings, so the module can be mounted on bricks. Interpretation, not confirmed: the six sockets are the six motor/light outputs A-F.
 
 ---
 
@@ -414,5 +435,5 @@ The BC2 image shows the board in a transparent housing with six output connector
 - Meaning of the constant bytes `80 80 80 80` in the Connect telegram.
 - Whether mode selection (first telegram after power-on) and the failsafe timeout (≈ 2 s) behave as on the MK4.0.
 - Whether the receiver uses the full 8-bit resolution or quantises internally (e.g. dead band around `0x80`).
-- Hardware details (section 8).
+- Hardware details (section 8): IC markings (RF chip, motor drivers; needs photos with the lid removed) and the pin assignment of the six output sockets.
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).
