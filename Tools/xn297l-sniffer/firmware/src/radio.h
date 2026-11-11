@@ -23,7 +23,7 @@
 #define RADIO_SYNC_MIN      3u      /* BALEN 2 + 1 prefix byte              */
 #define RADIO_SYNC_MAX      5u      /* BALEN 4 + 1 prefix byte              */
 #define RADIO_LEN_MAX       250u    /* bytes captured after the sync word  */
-#define RADIO_CHANNELS_MAX  16u     /* entries in the hopping list          */
+#define RADIO_CHANNELS_MAX  84u     /* entries in the hopping list (0 ... 83 = all channels) */
 
 /* Supported on-air data rates / modulation settings */
 enum radio_rate {

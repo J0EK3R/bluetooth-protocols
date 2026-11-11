@@ -2,8 +2,8 @@
 
 > Receives XN297L frames (2.4 GHz GFSK, see [XN297L](../../Chips/XN297L.md)) with an
 > nRF52840 USB dongle and shows them decoded in Wireshark.
-> Status: firmware compiles, host software and dissector tested against generated
-> reference frames and a simulated dongle – **not yet verified on real hardware** (see [Status](#status)).
+> Status: **verified on hardware** with a native XN297L transmitter (promiscuous mode, `nrf1m`)
+> and with XN297L frames emulated via BLE advertising (address mode, `ble1m`), see [Status](#status).
 
 A normal Bluetooth dongle cannot receive XN297L transmissions: its controller only
 reports packets with the BLE access address `0x8E89BED6` and a valid CRC-24.
@@ -66,8 +66,10 @@ one with a valid CRC.
 
 The dongle ships with a UF2 bootloader; no programmer is needed.
 
-1. Hold the button and plug the dongle in, then release the button. The RGB LED turns green
-   and a drive **UF2BOOT** appears.
+1. With the dongle plugged in, press the button **twice quickly**. The RGB LED turns green
+   and a drive **UF2BOOT** appears. (Tested with UF2 bootloader 0.2.13; according to the
+   makerdiary documentation, newer bootloaders enter this mode by holding the button while
+   plugging the dongle in.)
 2. Copy `firmware/prebuilt/xn297l_sniffer_nrf52840_mdk_usb_dongle.uf2` (or your own
    `build/zephyr/zephyr.uf2`) onto the drive.
 3. The dongle restarts and appears as a serial port (**XN297L Sniffer**, Windows: `COMx`,
@@ -115,7 +117,7 @@ port is open (DTR set). Any terminal program can be used.
 |---|---|---|
 | `sync <hex>` | sync word, 3 … 5 bytes, on-air order, MSB first | `710F55` |
 | `len <n>` | bytes captured after the sync word (1 … 250) | `39` |
-| `ch <c1,c2,…>` | RF channels, channel = MHz − 2400 (up to 16) | `2,26,80` |
+| `ch <list>` | RF channels, channel = MHz − 2400; single channels and ranges, e.g. `23`, `2,26,80`, `0-83` (up to 84 entries, ranges need firmware 1.1) | `2,26,80` |
 | `dwell <ms>` | time per channel, `0` = stay on the first one | `300` |
 | `rate <r>` | `nrf1m`, `ble1m` (1 Mbps, BLE deviation), `nrf2m` | `nrf1m` |
 | `start` / `stop` | start / stop the receiver | stopped |
@@ -153,6 +155,11 @@ Copy the files to the personal Wireshark folders (shown under
 
 Restart Wireshark. A new interface **XN297L sniffer (nRF52840 dongle)** appears.
 
+> **Empty serial port list / capture does not start:** the extcap runs with `py -3` on
+> Windows, which can be a different Python than `python`. Install pyserial for exactly
+> that interpreter: `py -3 -m pip install pyserial`. The port field is editable, so the
+> port (e.g. `COM8`) can also be typed in directly.
+
 ### 3.2 Capturing
 
 Click the gear icon next to the interface and set:
@@ -164,10 +171,11 @@ Click the gear icon next to the interface and set:
 | Address | `TX_ADDR` in SPI write order, e.g. `C1C2C3C4C5` (address mode) |
 | Address length | 3 … 5 (promiscuous mode) |
 | Payload length | `0` = find the length via CRC |
-| RF channels | e.g. `2` for 2402 MHz, `2,26,80` for the three BLE advertising frequencies |
+| RF channels | e.g. `2` for 2402 MHz, `2,26,80` for the three BLE advertising frequencies, `0-83` for all channels |
 | Dwell time | ms per channel when hopping |
 | Data rate | 1 Mbps (nRF), 1 Mbps (BLE deviation), 2 Mbps |
 | Scrambler off | for transmitters with the scrambler disabled |
+| Extra bytes after the frame | additional captured bytes (8 µs each at 1 Mbps), e.g. to look for an acknowledgement sent right after a frame; shown as *Bytes after the frame* |
 
 Display filter examples:
 
@@ -235,10 +243,10 @@ DissectorTable.get("xn297l.address"):add("C1C2C3C4C5", p)
 
 ## 4. Finding the parameters
 
-1. **Frequency:** start with `2,26,80` (2402/2426/2480 MHz). Receivers that are
-   also controlled through BLE advertising (see [XN297L](../../Chips/XN297L.md)) must
-   listen on one of these frequencies. Otherwise scan in steps:
-   `ch 0,5,10,…` with a short dwell time.
+1. **Frequency:** scan all channels in promiscuous mode (`ch 0-83`, dwell 30 … 50 ms) and
+   filter on strong signals in Wireshark (`xn297l.hdr.rssi > -85`); noise hits stay at about
+   −95 … −100 dBm. An XN297L signal is only 1 … 2 MHz wide, so a coarse grid (e.g. every
+   5 MHz) can miss a transmitter on a fixed channel.
 2. **Address:** if unknown, use promiscuous mode with `--show-bad`, look for recurring
    address bytes, then switch to address mode.
 3. **Data rate:** if nothing is received, try `ble1m` (wider deviation) or `nrf2m`
@@ -266,12 +274,22 @@ correctly by both the Python and the Lua decoder (Lua 5.1 … 5.4).
 | Firmware build (Zephyr 3.7.0, SDK 0.16.8), UF2 at `0x1000` | ✅ |
 | Python decoder, Lua decoder (Lua 5.1 … 5.4) against reference frames | ✅ |
 | extcap discovered by Wireshark 4.2, live capture from a simulated dongle, dissector output | ✅ |
-| Reception of a real XN297L transmitter | ❌ not yet |
-| Mapping of the sync word to `BASE0`/`PREFIX0` (derived from the BLE access address layout) | ❌ not yet on hardware |
-| Promiscuous mode on real signals | ❌ experimental |
+| Mapping of the sync word to `BASE0`/`PREFIX0` (derived from the BLE access address layout) | ✅ on hardware |
+| Address mode, `ble1m`, 2402 MHz: XN297L frames emulated by a phone via BLE advertising (address `C1C2C3C4C5`) | ✅ 292 of 292 frames with valid CRC, payload length found automatically, RSSI −59 … −84 dBm |
+| Native XN297L transmitter (original remote control), promiscuous mode, `nrf1m`, channel scan with dwell 50 ms | ✅ found on 2423 MHz, 44 frames with valid CRC at −51 … −83 dBm |
+| Native XN297L transmitter, address mode, `nrf1m`, single channel | ✅ continuous reception (~47 frames/s on one hopping channel); 6 … 10 % of the frames fail the CRC with systematic, recurring bit errors |
+| Extra bytes after the frame (up to 150) | ✅ works; used to search for acknowledgements |
+| Promiscuous mode, noise | random 24-bit matches on `71 0F 55` at noise level (≈ −95 … −100 dBm) without valid CRC; weak copies of a strong transmitter also appear on adjacent channels (e.g. 2425 MHz for 2423 MHz) with bit errors |
+
+Test 2026-11-11 (address mode): the captured frames show the Connect telegram
+`AD 7B A7 80 80 80 4F 52` (8 bytes) and Command telegrams `7D 7B A7 … 82` (10 bytes) with
+changing channel nibbles, i.e. exactly the telegrams described in [MK4.0](../../MouldKing/MK4.0.md).
 
 Open questions:
 
-- Does the nRF52840 reliably synchronise on the XN297L `0x55` preamble byte in address mode?
-- Which data rate setting (`nrf1m` / `ble1m`) gives the better reception for XN297L transmitters?
-- Is the promiscuous mode usable at all, or is a "noise preamble" trick (as known from the nRF24L01) needed?
+- Address length: the CRC covers address and payload together, so it cannot tell where the
+  address ends. In promiscuous mode a 3-, 4- or 5-byte split gives the same valid CRC; the
+  address length has to be known (5 bytes is the most common setting).
+- How reliable is the promiscuous mode compared with the address mode (missed frames)?
+- Do the systematic bit errors with native XN297L transmitters disappear with `ble1m` (wider
+  deviation), or are they caused by a frequency offset?

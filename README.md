@@ -17,6 +17,7 @@ The Mould King modules in the first table are controlled via **BLE advertising**
 | [MouldKing/MK3.0.md](MouldKing/MK3.0.md) | MK3.0 module | 2 analog (byte) + 2 on/off functions | `AA…55` / `66…99` |
 | [MouldKing/MK3.8.md](MouldKing/MK3.8.md) | MK3.8 module | 4 analog (nibble) + left/right | `B1…C1` / `81…C2` |
 | [MouldKing/MK4.0.md](MouldKing/MK4.0.md) | MK4.0 receiver | 4 analog (nibble) × 3 devices, shared telegram | `AD…52` / `7D…82` |
+| [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz |
 | [MouldKing/MK5.0.md](MouldKing/MK5.0.md) | MK5.0 tank module | drive, turret, shot, turn + turret lock | `AD…52` / `7D…82` (same as MK4.0) |
 | [MouldKing/MK6.0.md](MouldKing/MK6.0.md) | MK6.0 module | 6 analog (byte) × 3 devices, telegram per device | `6D…92` / `61…63` |
 
@@ -88,6 +89,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
     ├── MK3.0.md
     ├── MK3.8.md
     ├── MK4.0.md
+    ├── MK4.0-Remote.md
     ├── MK5.0.md
     ├── MK6.0.md
     ├── MKH4.0.md

@@ -1,7 +1,7 @@
 # Mould King MK4.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK4.cs`, `MKBaseNibble.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs` and the corresponding unit tests.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-11
 
 <img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="180">
 
@@ -42,7 +42,7 @@ App starts advertising
 - When advertising starts, the **Connect telegram** is sent first. It puts the receiver into **Bluetooth mode** (app control) instead of **remote-control mode** (original 2.4 GHz handset). There is **no pairing** (see section 4).
 - **Mode selection:** after power-on the receiver locks into the mode of the **first telegrams it receives**:
   - Connect telegram from the app → Bluetooth mode
-  - telegrams from the original handset → remote-control mode
+  - telegrams from the original handset → remote-control mode (handset protocol: [MK4.0 Remote](MK4.0-Remote.md))
 - The mode can only be changed again by a **power cycle**.
 - Afterwards the **Command telegram** carries the channel values (section 3).
 - **Failsafe timeout:** if the receiver gets no telegram for about **2 s**, it stops all outputs. The sender therefore has to transmit continuously (BLE advertising repeats the current data at every advertising interval, so this is satisfied as long as advertising is running).
@@ -462,4 +462,4 @@ The 16 MHz crystal matches the reference clock of XN297L-class transceivers, whi
 - Exact part numbers of the RF chip (`2148dMC`) and the `CC1130T` IC.
 - Function of the white battery wire (`3.7V` mid tap?) and the test pads on the back.
 - Interference with the [MK5.0](MK5.0.md), which uses identical Connect and Command identifiers.
-- Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).
+- ~~Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format~~ – answered: no, the handset uses its own frequencies, addresses and telegrams with binding, see [MK4.0 Remote](MK4.0-Remote.md).

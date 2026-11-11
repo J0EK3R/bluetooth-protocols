@@ -11,7 +11,9 @@
  *   sync <hex>           sync word, 3..5 bytes, on-air order, MSB first
  *                        e.g. "sync 710F55" or "sync 2675882844"
  *   len <n>              number of bytes captured after the sync word (1..250)
- *   ch <c1,c2,...>       RF channel list, channel = MHz - 2400 (0..100)
+ *   ch <list>            RF channel list, channel = MHz - 2400 (0..100),
+ *                        single channels and ranges, e.g. "23", "2,26,80",
+ *                        "0-83" (all channels), "10-20,40"; max. 84 entries
  *   dwell <ms>           time per channel when hopping, 0 = stay on first
  *   rate <r>             nrf1m (default) | ble1m | nrf2m
  *   start                start receiving
@@ -44,7 +46,7 @@
 
 #include "radio.h"
 
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.1.0"
 
 /* ------------------------------------------------------------------------ */
 /* Devices                                                                   */
@@ -283,7 +285,7 @@ static void handle_command(char *cmd)
 
 	if (strcmp(cmd, "help") == 0) {
 		out_str("I commands: help info start stop sync <hex> len <n> "
-			"ch <c1,c2,..> dwell <ms> rate <nrf1m|ble1m|nrf2m>\n");
+			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m>\n");
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "info") == 0) {
@@ -330,16 +332,31 @@ static void handle_command(char *cmd)
 	} else if (strcmp(cmd, "ch") == 0) {
 		struct radio_config tmp = cfg;
 		const char *p = arg;
-		uint32_t v;
+		uint32_t first;
+		uint32_t last;
 
 		tmp.channel_count = 0;
 		while (*p != '\0') {
-			if (!parse_uint(&p, &v) || v > 100u ||
-			    tmp.channel_count >= RADIO_CHANNELS_MAX) {
-				out_str("E ch must be a list of 1..16 channels 0..100\n");
+			/* one entry: "n" or a range "n-m" */
+			if (!parse_uint(&p, &first) || first > 100u) {
+				out_str("E ch must be channels 0..100, e.g. 2,26,80 or 0-83\n");
 				return;
 			}
-			tmp.channels[tmp.channel_count++] = (uint8_t)v;
+			last = first;
+			if (*p == '-') {
+				p++;
+				if (!parse_uint(&p, &last) || last > 100u || last < first) {
+					out_str("E ch range must be n-m with n <= m <= 100\n");
+					return;
+				}
+			}
+			for (uint32_t c = first; c <= last; c++) {
+				if (tmp.channel_count >= RADIO_CHANNELS_MAX) {
+					out_str("E ch list has more than 84 entries\n");
+					return;
+				}
+				tmp.channels[tmp.channel_count++] = (uint8_t)c;
+			}
 			while (*p == ',' || *p == ' ') {
 				p++;
 			}

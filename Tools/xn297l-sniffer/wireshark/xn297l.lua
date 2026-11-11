@@ -79,7 +79,7 @@ function core.scramble_table(length)
     return out
 end
 
-core.SCRAMBLE = core.scramble_table(80)
+core.SCRAMBLE = core.scramble_table(256)   -- maximum capture: sync + 250 bytes
 
 -- CRC-16/GENIBUS: poly 0x1021, init 0xFFFF, MSB first, final XOR 0xFFFF
 -- data: Lua array of bytes, from index first to last (inclusive)

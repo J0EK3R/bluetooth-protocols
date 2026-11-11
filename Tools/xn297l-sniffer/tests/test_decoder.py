@@ -197,7 +197,7 @@ class LuaDecoderTests(unittest.TestCase):
 
     def test_scramble_table_matches_python(self):
         t = self.core.SCRAMBLE
-        self.assertEqual([t[i] for i in range(1, 81)], xs.SCRAMBLE[:80])
+        self.assertEqual([t[i] for i in range(1, 257)], xs.SCRAMBLE[:256])
 
     def test_crc_matches_python(self):
         rnd = random.Random(2)
