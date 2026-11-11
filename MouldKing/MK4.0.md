@@ -417,7 +417,16 @@ CRC16 of the Connect telegram above: `0xABD3`.
 
 <img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="240">
 
-The BC2 image shows the module housing with the port labels **B** (top left), **C** (top right), **A** (bottom left) and **D** (bottom right), the four output connectors next to them and a Micro-USB socket in the center.
+### Housing
+
+<img src="img/mk4_housing_top.jpg" alt="Top view of the MK4.0 housing with port labels A, B, C, D, Micro-USB socket and green light pipe" height="360">
+<img src="img/mk4_housing_perspective.jpg" alt="MK4.0 housing seen at an angle, showing the top and a side with pin hole and openings" height="360">
+
+*Own photos of the housing. Left: top view with the port labels **A** (top left), **B** (top right), **D** (bottom left) and **C** (bottom right), the Micro-USB socket with the `DC5V` marking above it and a green light pipe (LED or button, not confirmed) below it in the center. Right: housing at an angle, showing the top and a side with a pin hole and openings.*
+
+The BC2 image at the top shows the port labels **B** (top left), **C** (top right), **A** (bottom left) and **D** (bottom right). The photos show the same clockwise order A-B-C-D, only rotated, so the port layout is identical.
+
+Observation from the photos (not verified): every port socket has 4 pins (2 + 2). This would explain the 8 × 2-pin headers on the board (two headers per port). The pin assignment is unknown.
 
 Part identifications from SMD markings (read from own photos of the receiver board) are best guesses unless stated otherwise.
 
