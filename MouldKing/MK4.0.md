@@ -1,6 +1,6 @@
 # Mould King MK4.0 – Bluetooth Protocol
 
-> Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK4.cs`, `MKBaseNibble.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs` and the corresponding unit tests.
+> Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK4.cs`, `MKBaseNibble.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs` and the corresponding unit tests; own photos of the receiver board (section 8).
 > Last updated: 2026-11-11
 
 <img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="180">
@@ -419,11 +419,25 @@ CRC16 of the Connect telegram above: `0xABD3`.
 
 <img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="240">
 
-The BC2 image shows the module housing with the port labels **B** (top left), **C** (top right), **A** (bottom left) and **D** (bottom right), the four output connectors next to them and a Micro-USB socket in the center.
+### Housing
 
-Based on photos of the receiver board. Part identifications from SMD markings are best guesses unless stated otherwise.
+<img src="img/mk4_housing_top.jpg" alt="Top view of the MK4.0 housing with port labels A, B, C, D, Micro-USB socket and green light pipe" height="360">
+<img src="img/mk4_housing_perspective.jpg" alt="MK4.0 housing seen at an angle, showing the top and a side with pin hole and openings" height="360">
+
+*Own photos of the housing. Left: top view with the port labels **A** (top left), **B** (top right), **D** (bottom left) and **C** (bottom right), the Micro-USB socket with the `DC5V` marking above it and a green light pipe (LED or button, not confirmed) below it in the center. Right: housing at an angle, showing the top and a side with a pin hole and openings.*
+
+The BC2 image at the top shows the port labels **B** (top left), **C** (top right), **A** (bottom left) and **D** (bottom right). The photos show the same clockwise order A-B-C-D, only rotated, so the port layout is identical.
+
+Observation from the photos (not verified): every port socket has 4 pins (2 + 2). This would explain the 8 × 2-pin headers on the board (two headers per port). The pin assignment is unknown.
+
+Part identifications from SMD markings (read from own photos of the receiver board) are best guesses unless stated otherwise.
 
 ### 8.1 Board
+
+<img src="img/mk4_board_front.jpg" alt="Front side of the MK4.0 receiver board HF-XKL4.0RX" height="360">
+<img src="img/mk4_board_back.jpg" alt="Back side of the MK4.0 receiver board HF-XKL4.0RX" height="360">
+
+*Front (left) and back (right) of the receiver board. Front: antenna wire at the top edge, SOP-16 `2148dMC` with the 16.000 MHz crystal at the top, SOP-16 `CC1130T` at the left, push button and Micro-USB socket in the center, 2 SMD LEDs, four SOP-8 ICs, silkscreen `4.0RX` / `2020/04/12` / `HF-XKL4.0RX`, battery wires (red / white / black) at the left, 2-pin headers in the four corners. Back: silkscreen `XKL4.0RX` / `2021/03/12` / `HF-XKL4.0RX`, group of small test pads in the center. Own photos.*
 
 | Property | Value |
 |---|---|
@@ -434,8 +448,8 @@ Based on photos of the receiver board. Part identifications from SMD markings ar
 | User interface | 1 push button (device selection, see section 1.2), 2 SMD LEDs |
 | Charging | Micro-USB socket |
 | Battery | 3-wire cable red / white / black, silkscreen `B+` / `3.7V` / `B-` |
-| Motor outputs | 4 × 2-pin headers (2 at the top, 2 at the bottom) |
-| Test pads | group of small pads in the center of the back side (possibly programming/debug) |
+| Motor outputs | 8 × 2-pin headers: two side by side in each of the four corners (presumably one pair per output channel A–D) |
+| Test pads | group of small pads in the center of the back side (possibly programming/debug); a cluster of tiny pads surrounded by a few larger solder pads |
 
 The silkscreen suggests a 2-cell pack with a middle tap: red = `B+`, white = `3.7V` (mid tap), black = `B-` (unverified).
 
@@ -444,12 +458,17 @@ The silkscreen suggests a 2-cell pack with a middle tap: red = `B+`, white = `3.
 | Marking | Package | Probable function |
 |---|---|---|
 | `2148dMC` | SOP-16, next to the 16 MHz crystal and the antenna | RF transceiver / RF SoC (XN297L-compatible 2.4 GHz). Marking looks like a date/lot code only; exact part unknown |
-| `W` logo, `CC1130T`, `L1D0C281` | SOP-16, near button and battery connector | unknown; MCU or charge/power management IC |
+| `W` logo, `CC1130T`, `L1D0C281` | SOP-16, left of the push button, above the battery pads | unknown; MCU or charge/power management IC |
 | (no readable marking) | 4 × SOP-8 | H-bridge motor drivers, one per output channel |
 | `2301` | 2 × SOT-23 | P-channel MOSFET (e.g. SI2301), power switching |
 | `2300` | 2 × SOT-23 | N-channel MOSFET (e.g. SI2300) |
 | `J3Y` | SOT-23 | NPN transistor (S8050) |
 | `7333` | SOT-23 | 3.3 V LDO regulator (e.g. HT7333) |
+
+<img src="img/mk4_chip_2148dmc.jpg" alt="Close-up of the SOP-16 marked 2148dMC next to the 16.000 MHz crystal" height="360">
+<img src="img/mk4_chip_cc1130t.jpg" alt="Close-up of the SOP-16 marked CC1130T with two 2301 SOT-23 parts" height="360">
+
+*Left: SOP-16 `2148dMC` below the 16.000 MHz crystal (an SOP-8 and a 2-pin header are visible at the bottom). Right: SOP-16 with `W` logo, `CC1130T` and `L1D0C281`, the push button and Micro-USB socket at the right, two `2301` SOT-23 parts below the IC, a `2300` at the bottom, the `2148dMC` and the crystal at the top right. Own photos.*
 
 The 16 MHz crystal matches the reference clock of XN297L-class transceivers, which supports the protocol interpretation in section 5.1.
 
