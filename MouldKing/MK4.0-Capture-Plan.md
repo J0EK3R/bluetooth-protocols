@@ -16,6 +16,7 @@
 8. [Tool follow-up proposals](#8-tool-follow-up-proposals)
 9. [Recording the results](#9-recording-the-results)
 10. [Appendix: settings audit](#10-appendix-settings-audit)
+11. [Open questions](#11-open-questions)
 
 ---
 
@@ -80,7 +81,20 @@ SNIFF="python -u Tools/xn297l-sniffer/extcap/xn297l_sniffer.py --print --show-ba
 5. Write down for every run the actions with a wall-clock time or an action counter (the log has
    no host clock, see F1).
 
-### 2.3 Hints
+### 2.3 Binding the receiver
+
+Needed whenever a run says "bound" (sessions 3 and 4, and every change of handset). The first
+handset that is switched on after the receiver's power-up wins, and the binding is only lost by a
+power cycle of the receiver ([MK4.0-Remote.md](MK4.0-Remote.md) section 1):
+
+1. Switch **all** handsets off and power-cycle the receiver (battery off, then on); the receiver searches (LED blinking).
+2. Switch on **only** the chosen handset (N).
+3. Wait until the LEDs of receiver and handset are constant; check with a short stick movement that a load reacts.
+4. To change to another handset: switch it on only after step 1 again (handset N off, receiver power-cycled).
+
+Exception: Q6 step c deliberately switches all three handsets on together, with the receiver off.
+
+### 2.4 Hints
 
 - Place the dongle 0.5 … 1 m from the device under test; do not touch handset and dongle antenna.
 - Only one program may hold the serial port (close Wireshark when using `--print`).
@@ -134,7 +148,7 @@ Wireshark display filters (from the [README](../Tools/xn297l-sniffer/README.md) 
 - Hopping: dwell has 1 ms granularity (checked against the millisecond uptime), every hop restarts
   the radio (ramp-up) and drops a frame in progress.
 - Capture window after a frame is at most 250 bytes (extra bytes ≤ 200 = 1.6 ms at 1 Mbps).
-- Device time: 32 bit microseconds from the kernel clock (resolution about 30 µs), wraps after 71.6 min.
+- Device time: 32 bit microseconds from the kernel clock (resolution about 30 µs, **assumption**: the tick rate of `k_uptime_ticks` is not stated in the repository; verify with the spacing of timestamps), wraps after 71.6 min.
 - `--print` has device time only: no host clock, no event markers, no energy-detect / RSSI scan.
 
 ---
@@ -246,7 +260,7 @@ blinking).
 | R2.1 | receiver just powered on, searching, handsets off | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
 | R2.2 | as R2.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate ble1m` | 120 s |
 | R2.3 | as R2.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf2m` | 120 s |
-| R2.4 | receiver bound to handset 1, handset switched off (failsafe blink) | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
+| R2.4 | receiver bound to handset 1, handset switched off (expected: receiver stays bound, LED behaviour is an **assumption** – note what you actually see) | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
 | R3.1 | bound, handset 1 off/on 10x (5 s each) | `--mode address --address 8C034B4448 --channels 11 --dwell 0 --payload-length 0 --rate nrf1m` | ~2 min |
 | R3.1x | as R3.1 | `--mode address --address 8C034B4448 --channels 11 --dwell 0 --payload-length 5 --extra-bytes 200 --rate nrf1m` | ~2 min |
 | R3.2 | as R3.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 11 --dwell 0 --rate nrf2m` | ~2 min |
@@ -347,8 +361,8 @@ All four channels are expected to carry the same payload.
 
 **Expected result:** a repeating gap pattern per channel, a stable phase offset per channel pair, equal payload on all channels.
 
-**Limits:** dwell has 1 ms granularity; each hop costs a radio ramp-up (~100 µs or more) and drops a
-frame in progress; timestamp resolution ~30 µs. The accuracy suffices for ms-scale slots, not for
+**Limits:** dwell has 1 ms granularity; each hop costs a radio ramp-up (~100 µs or more, **assumption**, not derived from the tool sources) and drops a
+frame in progress; timestamp resolution ~30 µs (**assumption**, see section 3.2). The accuracy suffices for ms-scale slots, not for
 the exact dwell in µs. *Optional 2nd dongle:* two dongles on two channels with a common host clock
 (F6) give the order directly; microsecond-level dwell needs F3 or an SPI tap.
 
@@ -358,7 +372,7 @@ the exact dwell in µs. *Optional 2nd dongle:* two dongles on two channels with 
 switches (values `02` / `80` / `FE`). H4b: CH1 … CH4 map to ports A … D in order (or in a pairing like the
 app: channel 0 = port A … 3 = port D, see [MK4.0.md](MK4.0.md) section 3). H4c: CH5 / CH6 have no effect on the MK4.0 receiver.
 
-**Setup.** Session 3: receiver bound to handset 1, a motor or LED on each of the ports A, B, C, D
+**Setup.** Session 3: receiver bound to handset 1 (procedure in section 2.3), a motor or LED on each of the ports A, B, C, D
 (or move one load across the ports). Run R3.9 for about 5 minutes:
 
 | Run | Mode / address | Channels | Dwell | Payload length | Rate | Options |
@@ -381,7 +395,7 @@ changing payload):
 CHn -> port, direction, value range (section 9). **Interpretation:** record the measured values
 only (minimum / maximum actually seen); note separately if one action moves two ports (mixing).
 Step 13 shows whether the receiver reacts in 255 steps or in coarse steps (compare the app: 7 steps per direction).
-Repeat with handset 2 or 3 (the identity must not change the mapping). R3.5 shows that all four
+Repeat with handset 2 or 3 (re-bind as in section 2.3; the identity must not change the mapping). R3.5 shows that all four
 channels carry the same payload, so one hop channel is sufficient.
 
 **Limits:** none for the nRF52840.
@@ -433,7 +447,7 @@ first source -> H5c, consistent with the documentation. Outcome "none" -> interf
 (e.g. identity byte fixed, 2-byte ID random). The LED observation (the handset is constant
 immediately when switched on again with a bound receiver) already suggests H6a.
 
-**Setup.** Session 1, receiver **off**: R1.1 (settings of Q2: 4-byte address `034B4448`, channel `11`, dwell 0, payload length 0, `RATE*`, `--show-bad`), one capture per handset:
+**Setup.** Session 1, receiver **off** (no binding needed, section 2.3 only for the cross-check): R1.1 (settings of Q2: 4-byte address `034B4448`, channel `11`, dwell 0, payload length 0, `RATE*`, `--show-bad`), one capture per handset:
 
 | Step | Action | Count |
 |---|---|---|
@@ -558,3 +572,13 @@ Every distinct sniffer setting used in this document and where it exists in the 
 
 Not available and therefore **not used** anywhere above: any transmit command, dwell below 1 ms,
 250 kbps, 2 Mbps BLE, several sync words at once, energy detect, a host-clock column, event markers.
+
+---
+
+## 11. Open questions
+
+- **Failsafe behaviour (R2.4):** what the receiver LED does with a bound handset switched off is not documented; the observation in R2.4 is to be noted by the user.
+- **`RATE*`:** whether `ble1m` reduces the 6 … 10 % CRC errors is decided by session 0.
+- **Timing assumptions:** the ~30 µs timestamp resolution and the ~100 µs radio ramp-up are assumptions (section 3.2, Q3).
+- **Follow-ups:** which of F1 … F7 are worth implementing (F1, F2 and F6 are small and help most).
+- **Optional hardware (session 6):** whether extra hardware or opening a device is acceptable if Q1 / Q2 stay open.
