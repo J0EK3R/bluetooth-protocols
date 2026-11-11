@@ -2,7 +2,7 @@
 
 > Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), three MK4.0 handsets and one MK4.0 receiver, 2026-11-11.
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-11
+> Last updated: 2026-11-11 (link to capture plan)
 
 ## Overview
 
@@ -123,7 +123,7 @@ Remaining hypotheses:
    received with the nRF52840).
 3. The receiver answers on one of the **operating channels**.
 
-Planned captures (promiscuous, payload length auto):
+Planned captures (promiscuous, payload length auto). The complete step-by-step plan for all open questions is in [MK4.0-Capture-Plan.md](MK4.0-Capture-Plan.md); captures A, B, C below correspond to its runs R2.1, R2.3 and R3.2 (the plan uses 20 ms dwell and 120 s per run):
 
 | # | Situation | Channels | Dwell | Data rate |
 |---|---|---|---|---|
@@ -234,6 +234,8 @@ Data rate `1 Mbps (nRF)` in all cases.
 ---
 
 ## 9. Open questions
+
+The captures and experiments planned to answer these questions are described in [MK4.0-Capture-Plan.md](MK4.0-Capture-Plan.md).
 
 - **Receiver response:** what does the MK4.0 receiver send to end the bind phase (channel,
   address, data rate, content)? Not captured yet, see section 2.2 for what has been ruled out
