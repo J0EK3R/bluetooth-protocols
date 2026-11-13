@@ -2,6 +2,13 @@
 
 Descriptions of the radio / Bluetooth protocols of remote-controlled building-block modules and receivers.
 
+Two kinds of protocols are covered:
+
+- **BLE advertising** – the protocols used by smartphone apps (e.g. BrickController2): the phone sends the control telegrams as BLE advertising packets.
+- **Original 2.4 GHz remote controls** – the protocols of the vendors' own handsets, which transmit natively with an XN297L-compatible chip ([MK4.0 handset](MouldKing/MK4.0-Remote.md), [SCM8 handset](JieStar/SCM8-Remote.md)), captured with the [XN297L sniffer](Tools/xn297l-sniffer/README.md).
+
+**Key finding:** on air both paths produce the same bytes. The app pre-computes a complete XN297L frame (preamble `71 0F 55`, scrambled address, payload and CRC-16) and pre-compensates the BLE whitening, so the bytes the phone transmits are exactly the bytes of a native XN297L frame – the same frame format the original handsets send. The receiver cannot tell the two apart at the frame layer; only frequency, address and telegram content differ. Details: [MK4.0 handset vs. app](MouldKing/MK4.0-Remote-vs-BLE.md), [XN297L](Chips/XN297L.md).
+
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
 All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which **none of these receivers evaluates** – there is no pairing, any receiver in range reacts to every matching telegram. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
