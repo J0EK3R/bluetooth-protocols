@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Capture plan for the original handset
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
-> Status: **in progress** – bind phase (R1.a, R1.b) and operating channels (R3.1) found; results in [SCM8-Remote.md](SCM8-Remote.md). Sessions 2 and 4 are still open.
-> Last updated: 2026-11-13 (result of R4.1, explanation of the sniffer RF channels)
+> Status: **in progress** – S1, S2 and S4 answered, S3 and S6 partly (handset side of the telegram decoded); open: identity (S5), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
+> Last updated: 2026-11-13 (status of all questions and sessions updated, new runs R3.4 … R3.5 and R4.2 … R4.4)
 
 ## Contents
 
@@ -21,20 +21,22 @@
 
 ## 1. Purpose and scope
 
-Unlike the [MK4.0 handset](../MouldKing/MK4.0-Remote.md), **nothing is known** about the SCM8 handset yet.
-The app protocol ([SCM8.md](SCM8.md)) is an XN297L frame hidden in BLE advertising on 2402 MHz with
-address `C1 … C5`; the handset may use a completely different radio configuration (as the MK4.0
-handset does) or even a different chip.
+When this plan was written, nothing was known about the SCM8 handset. The app protocol
+([SCM8.md](SCM8.md)) is an XN297L frame hidden in BLE advertising on 2402 MHz with address
+`C1 … C5`. The first captures (2026-11-13) showed that the handset, like the
+[MK4.0 handset](../MouldKing/MK4.0-Remote.md), uses a completely different radio configuration with
+the same XN297L frame layer.
 
-| # | Question |
-|---|---|
-| S1 | Does the handset transmit BLE (advertising) or a proprietary 2.4 GHz frame? |
-| S2 | Frequency / frequencies, data rate |
-| S3 | Address (length, on-air bytes), payload length |
-| S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? |
-| S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? |
-| S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H |
-| S7 | Does the handset select a device slot (Device 1 … 3 like the app)? |
+| # | Question | Status |
+|---|---|---|
+| S1 | Does the handset transmit BLE (advertising) or a proprietary 2.4 GHz frame? | **answered:** proprietary – native XN297L frames found directly on 2411 MHz (R1.a); session 0 skipped |
+| S2 | Frequency / frequencies, data rate | **answered:** bind 2411 MHz, operation 2416 / 2433 / 2450 / 2469 MHz, 1 Mbps (R1.a, R3.1) |
+| S3 | Address (length, on-air bytes), payload length | **partly:** bind `TX_ADDR` `E4834A5834`, operating `TX_ADDR` `E48C545690`, payload 3 / 8 bytes with a 5-byte address (R1.a, R3.1); the address length cannot be decided passively |
+| S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? | **answered:** yes – bind telegrams every 20.08 ms on 2411 MHz until the receiver is switched on, then hopping over four channels (R1.b, R3.1). Still open: does the bind phase also use other channels (R2.2)? |
+| S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? | **open:** only one handset measured; `E4` + `22 5B` appear in both phases (R2.3, R2.4) |
+| S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H | **partly:** handset side decoded – CH1 … CH4 proportional, B6 = 8 momentary buttons, B7 = 4 latching bits (R4.1); physical controls and port reaction open (R4.2) |
+| S7 | Does the handset select a device slot (Device 1 … 3 like the app)? | **open:** no Device 1 … 3 marking on the handset; the round button with the ring symbol is unexplained (R4.2) |
+| S8 | Hopping order and spacing of the four operating channels within the 16.07 ms period | **open** (new question after R4.1; R4.3) |
 
 Writing convention as in the [MK4.0 capture plan](../MouldKing/MK4.0-Capture-Plan.md): only measured
 values go into the result document (`SCM8-Remote.md`, created after session 2), interpretations are
@@ -47,12 +49,12 @@ marked as such.
 | Item | Needed for |
 |---|---|
 | nRF52840 MDK USB dongle | all sessions |
-| firmware **nRF Sniffer for BLE** ([Tools/nrf-sniffer-ble](../Tools/nrf-sniffer-ble/README.md)) | session 0 |
+| firmware **nRF Sniffer for BLE** ([Tools/nrf-sniffer-ble](../Tools/nrf-sniffer-ble/README.md)) | session 0 (skipped, not needed) |
 | firmware **XN297L sniffer 1.1** ([Tools/xn297l-sniffer](../Tools/xn297l-sniffer/README.md)) | sessions 1 … 4 |
 | SCM8 handset (if there are several: note a label for each, H1, H2, …) | all sessions |
 | SCM8 receiver with battery | sessions 3, 4 |
 | motors or LEDs on as many ports A … H as possible | session 4 |
-| phone with BrickController2 (SCM8 device configured) | sanity check R1.0 |
+| phone with BrickController2 (SCM8 device configured) | sanity check R1.0 (not run), R3.6 |
 | PC with Wireshark (extcap) or Python 3 + `pyserial` for `--print` | all sessions |
 
 Flashing: double-click the dongle button (LED green, UF2 drive appears), copy the `.uf2` of the
@@ -77,22 +79,25 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 
 ## 3. Session order
 
-| Session | Device state | Runs | Questions | Time |
-|---|---|---|---|---|
-| 0 BLE check | handset on, receiver off | R0.1, R0.2 | S1 | 10 min |
-| 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4 | S1, S2, S3 | 30 min |
-| 2 Lock on | handset on, receiver off | R2.x (depends on session 1) | S3, S4, S5 | 30 min |
-| 3 Handset + receiver | receiver on, binding | R3.x | S4, S5 | 30 min |
-| 4 Mapping | receiver bound | R4.1 | S6, S7 | 20 min |
+| Session | Device state | Runs | Questions | Time | Status |
+|---|---|---|---|---|---|
+| 0 BLE check | handset on, receiver off | R0.1, R0.2 | S1 | 10 min | **skipped** – R1.a found XN297L frames, S1 answered |
+| 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
+| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **open** – R2.5 already answered by R1.b |
+| 3 Handset + receiver | receiver on, binding | R3.1 … R3.6 | S4, S5 | 30 min | **partly** – R3.1 done; R3.4 … R3.6 and the LED table open |
+| 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1 done (handset side); R4.2 … R4.4 open |
 
-**Sessions 0 and 1 are fully specified below. Sessions 2 … 4 get their exact settings once session 1
-has found the frequency and data rate** (address, channels and payload length are filled in then).
+All runs now have their exact settings. Sessions 0 and 1 are kept for reference and for other
+handsets.
 
 ---
 
 ## 4. Session 0 – Is the handset a BLE device?
 
 Cheap first check: some newer handsets are BLE advertisers. Firmware: **nRF Sniffer for BLE**.
+
+**Status: skipped.** R1.a (section 5.1) received native XN297L frames from the handset, so S1 is
+answered without this session.
 
 | Run | State | Wireshark | Duration |
 |---|---|---|---|
@@ -112,6 +117,9 @@ handset). Compare the device list of R0.1 and R0.2.
 ## 5. Session 1 – Find the handset (XN297L discovery)
 
 Firmware: **XN297L sniffer**. Receiver off, so the handset stays in a possible bind phase (as with the MK4.0).
+
+**Status:** R1.0 … R1.4 were not run: the first capture R1.a went straight to the MK4.0 bind
+channel 2411 MHz and found the handset (section 5.1).
 
 ### R1.0 – Sanity check with the app (known transmitter)
 
@@ -190,8 +198,11 @@ about 150 extra bytes. Handset switched on, SCM8 receiver **off**, sticks untouc
 - As with the MK4.0, the address length cannot be decided passively: 3, 4 and 5 bytes all give a
   valid CRC. With a 3-byte address the payload is 5 bytes like the MK4.0 bind telegram.
 - The ~54 % missing slots are either reception losses of the promiscuous mode, or the handset
-  sends on other channels in between (e.g. alternating every 10 ms) – R2.2 checks this.
+  sends on other channels in between (e.g. alternating every 10 ms) – R2.1 / R2.2 check this.
+  In operation, address mode received 99.8 % of the slots (R4.1), which points to losses of the
+  promiscuous mode.
 - `22 5B` (or `27 22 5B`, `C1 27 22 5B`) is a candidate for the handset identity; R2.3 / R2.4 check it.
+  **Confirmed in R3.1:** the identity byte `E4` and `22 5B` also appear in the operating frames.
 
 ### 5.2 Result of capture R1.b (2026-11-13)
 
@@ -208,8 +219,9 @@ handset on → SCM8 on → all sticks and buttons moved → SCM8 off → handset
 | Payload changes | none (no stick values on 2411 MHz) |
 | Other addresses | none |
 
-**Interpretation (not verified):** the bind frames end when the SCM8 is switched on; the handset
-then leaves 2411 MHz and transmits its control telegrams on other channels (like the MK4.0 handset).
+**Interpretation:** the bind frames end when the SCM8 is switched on; the handset
+then leaves 2411 MHz and transmits its control telegrams on other channels (like the MK4.0 handset)
+– **confirmed by R3.1** (operating channels 2416 / 2433 / 2450 / 2469 MHz, switch within 230 ms).
 No frame of the receiver was seen on 2411 MHz. If the capture was still running when the SCM8 was
 switched off again, the handset did **not** return to the bind phase – to be confirmed (duration of
 the capture).
@@ -226,7 +238,7 @@ Values from R1.a (section 5.1). Handset on, SCM8 receiver **off**, sticks untouc
 | R2.2 | does the handset also send on other channels in the bind phase? | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-10,12-83 --dwell 50 --rate nrf1m` | Promiscuous, Address length 5, Payload `0`, RF channels `0-10,12-83`, Dwell `50` | 120 s |
 | R2.3 | identity fixed? handset off 5 s / on 5 s, 10× | as R2.1 | as R2.1 | ~2 min |
 | R2.4 | 2nd handset (only if available) | `--mode address --address 834A5834 --channels 11 --dwell 0 --payload-length 0 --rate nrf1m` (4-byte address: both handsets in one log, if they share it) | Known address, Address `834A5834`, rest as R2.1 | 60 s |
-| R2.5 | sticks / buttons in the bind phase: does the payload change? | as R2.1, move every control once | as R2.1 | 60 s |
+| R2.5 | sticks / buttons in the bind phase: does the payload change? | **answered by R1.b** – not needed | – | – |
 
 Expected / interpretation:
 
@@ -237,7 +249,8 @@ Expected / interpretation:
 - R2.3: same address and payload after every power-on → fixed identity (H6a of the MK4.0 plan);
   otherwise generated at power-on.
 - R2.4: which bytes differ between two handsets decides which bytes are the identity.
-- R2.5: payload stays `22 5B 00` → the bind telegram carries no control values (as MK4.0).
+- R2.5: **answered by R1.b** – the payload stayed `22 5B 00` while all sticks and buttons were
+  moved: the bind telegram carries no control values (as MK4.0).
 
 Questions answered: S3, S4 (bind part), S5.
 
@@ -264,12 +277,37 @@ address mode for the mapping (section 8).
 `22 5B CH1 CH2 CH3 CH4 B6 B7`. 44 of 49 frames with valid CRC (the 5 others: noise at −99 … −101 dBm).
 Details in [SCM8-Remote.md](SCM8-Remote.md).
 
-Further content of this session:
+Status of the further content of this session:
 
-- receiver off → handset on → receiver on: does the handset change frequency, address or payload (bind → operation, as with the MK4.0)?
-- note LED behaviour of handset and receiver in the table of section 9 (the [MK4.0 table](../MouldKing/MK4.0-Remote.md#11-led-behaviour) is the template);
-- receiver off while handset stays on: does the handset notice it (back channel)?
-- several receivers / several handsets: who binds to whom?
+| Item | Status |
+|---|---|
+| receiver off → handset on → receiver on: does the handset change frequency, address or payload? | **answered** (R1.b, R3.1): bind phase on 2411 MHz with bind address and 3-byte payload → operation on four channels with operating address and 8-byte payload, switch within 230 ms |
+| LED behaviour of handset and receiver | **open** – fill in the table of section 9 (the [MK4.0 table](../MouldKing/MK4.0-Remote.md#11-led-behaviour) is the template) |
+| receiver off while the handset stays on: does the handset notice it (back channel)? | **open** – R3.4 |
+| what does the receiver send to end the bind phase? | **open** – R3.5 |
+| does the SCM8 lock into handset or app mode after power-on (like the MK4.0)? | **open** – R3.6 |
+| several receivers / several handsets: who binds to whom? | **open** – needs a 2nd handset or receiver |
+
+Further runs (receiver bound to the handset unless stated otherwise):
+
+| Run | Purpose | Options | Wireshark | Duration |
+|---|---|---|---|---|
+| R3.4a | handset bound and running; switch the SCM8 **off** after ~20 s, leave the handset on: does the handset return to the bind phase? | `--mode address --address E4834A5834 --channels 11 --dwell 0 --payload-length 0 --rate nrf1m` | Known address, Address `E4834A5834`, RF channels `11`, Dwell `0`, Payload `0` | 60 s |
+| R3.4b | same sequence, observing the operation instead: do the control frames continue? | `--mode address --address E48C545690 --channels 16 --dwell 0 --payload-length 8 --rate nrf1m` | Known address, Address `E48C545690`, RF channels `16`, Dwell `0`, Payload `8` | 60 s |
+| R3.5 | receiver response: SCM8 on and bound, switch the **handset** off for 5 s and on again, 10× | `--mode promiscuous --address-length 5 --payload-length 0 --channels 11 --dwell 0 --rate nrf1m` (then the same with `--rate nrf2m` and `--rate ble1m`) | Promiscuous, Address length 5, Payload `0`, RF channels `11`, Dwell `0` | 3 × 2 min |
+| R3.6 | handset vs. app: power the SCM8 with the handset already on and BrickController2 already sending; 5 trials; note which source controls the ports | as R3.4b (shows whether the handset leaves its bind phase) | as R3.4b | 5 × 1 min |
+
+Interpretation:
+
+- R3.4a: bind frames reappear → the handset notices the missing receiver (back channel in
+  operation); nothing → one-way link in operation, as with the MK4.0 (interpretation of its LED
+  behaviour). R3.4b: control frames continue after the SCM8 is off → the handset does not notice.
+- R3.5: any frame with an address other than `E4834A5834` → candidate for the receiver's answer
+  (note time relative to the last bind frame). Nothing → the answer uses another channel, another
+  data rate (250 kbps cannot be received) or no XN297L framing – same situation as the MK4.0
+  ([MK4.0 plan Q1](../MouldKing/MK4.0-Capture-Plan.md#q1--receiver-response-during-binding)).
+- R3.6: the source that wins in all trials (or the first one, if the order is varied) shows whether
+  the SCM8 locks into one mode like the MK4.0.
 
 ---
 
@@ -285,22 +323,42 @@ Channel `16` = 2416 MHz (sniffer channel = MHz − 2400); the four operating cha
 `16`, `33`, `50`, `69` = 2416, 2433, 2450, 2469 MHz. With `--dwell 0` the sniffer stays on one
 channel and receives every pass of the handset's hopping sequence, see
 [SCM8-Remote.md §8](SCM8-Remote.md#8-capturing-with-the-xn297l-sniffer).
-One channel is enough if all four channels carry the same payload (to be confirmed once with
-`--channels 16,33,50,69 --dwell 1` while moving one stick; with a list, dwell must be > 0,
-otherwise the sniffer stays on `16`).
+One channel is enough if all four channels carry the same payload (confirmed in R4.3).
 
 **Result R4.1 (2026-11-13):** handset side done – 4 proportional axes CH1 … CH4, 8 momentary
 buttons (B6 bits), 4 latching states (B7 bits), see [SCM8-Remote.md §5](SCM8-Remote.md#5-control-telegram-8-bytes).
-Still missing: names of the physical controls and the port reaction (A … H).
+Still missing: which physical control sets which byte / bit, and the port reaction (A … H).
+The handset photos ([SCM8-Remote.md, Handset](SCM8-Remote.md#handset)) show the printed control
+names: sticks **A** / **B** (left) and **C** / **D** (right), button groups **E**, **F**, **G**,
+**H** (two buttons each), four shoulder buttons, a round button with a ring symbol.
 
-Procedure as in the
+Further runs:
+
+| Run | Purpose | Options | Duration |
+|---|---|---|---|
+| R4.2 | mapping controls → bytes / bits → ports A … H, and device slot (S7) | as R4.1 | ~5 min |
+| R4.3a – f | hopping order (S8): channel pairs `16,33` `16,50` `16,69` `33,50` `33,69` `50,69`, sticks neutral | `--mode address --address E48C545690 --channels 16,33 --dwell 1 --payload-length 8 --rate nrf1m` (and the other five pairs) | 60 s each |
+| R4.3g | all four channels carry the same payload: move one stick slowly | `--mode address --address E48C545690 --channels 16,33,50,69 --dwell 1 --payload-length 8 --rate nrf1m` | 60 s |
+| R4.4 | B7 over a power cycle: note B7, switch the handset off and on (receiver stays on), 5× | as R4.1 | ~2 min |
+
+**R4.2 procedure** as in the
 [MK4.0 plan Q4](../MouldKing/MK4.0-Capture-Plan.md#q4--channel-mapping-ch1--ch6---controls---ports-a--d):
 each control is moved and held for 3 s, 3 s neutral in between, in a fixed order written down with
-its number; per action note which payload byte changes (CH1 … CH4, B6, B7) and which port
-(A … H) reacts. Watch especially for the button that changes **B7** (`0F` ↔ `04` in R3.1) and
-whether it switches the sticks to other ports (E … H).
-Additionally: is there a switch or button on the handset that selects Device 1 … 3 (S7), and does
-it change the address or a byte in the payload?
+its number (stick A up / down, B left / right, C, D; buttons E, F, G, H, each of the two; the four
+shoulder buttons; the round button). Per action note which payload byte changes (CH1 … CH4, B6, B7)
+and which port (A … H) reacts. Expected (interpretation from the photos): sticks A … D → CH1 … CH4
+→ ports A … D; buttons E … H → B6 bits → ports E … H (two directions each); shoulder buttons → B7 bits.
+Watch whether a B7 bit switches the sticks to other ports and whether the round button changes the
+address or a payload byte (Device 1 … 3, S7).
+
+**R4.3 analysis** as in the
+[MK4.0 plan Q3](../MouldKing/MK4.0-Capture-Plan.md#q3--hopping-order-and-dwell-time): for each frame
+on channel a take the next frame on channel b; the delay histogram peaks at the phase offset of b
+relative to a within the 16.07 ms period. Sorting the offsets gives the order: one frame every
+~4 ms rotating over the channels, or a burst over all four channels per period.
+
+**R4.4:** B7 unchanged after power-on → the latching states are stored in the handset; always the
+same start value (R3.1 started with `0F`) → reset at power-on.
 
 ---
 
@@ -310,20 +368,35 @@ it change the address or a byte in the payload?
 
 | Run | New BLE device? | Address / name | RSSI | Data changes with sticks? |
 |---|---|---|---|---|
-| R0.2 | | | | |
+| R0.2 | not run (session 0 skipped) | | | |
 
 **Session 1 – frames found**
 
 | Run | Channel (MHz) | Rate | Address | Length | Payload (example) | RSSI | CRC ok / bad | Remark |
 |---|---|---|---|---|---|---|---|---|
-| R1.0 | 2402 | ble1m | `C1C2C3C4C5` | | | | | app sanity check |
+| R1.0 | 2402 | ble1m | `C1C2C3C4C5` | | | | | app sanity check – not run (not needed) |
 | R1.a | 2411 | nrf1m | `E4834A5834` (5 B) | 3 | `22 5B 00` | −47 … −84 | 197 / 3 | channel 11 only, receiver off, 20.08 ms grid, 46 % of slots received |
 | R1.b | 2411 | nrf1m | `E4834A5834` (5 B) | 3 | `22 5B 00` | −51 … −62 | 155 / 2 | channel 11 only, SCM8 switched on during the run; bind frames stop after 6.89 s, nothing afterwards |
 | R3.1 | 2416 / 2433 / 2450 / 2469 | nrf1m | `E48C545690` (5 B) | 8 | `22 5B 80 80 80 80 00 04` | −53 … −69 | 44 / 5 | SCM8 bound, scan `0-83` dwell 50; 5 bad = noise |
 | R4.1 | 2416 | nrf1m | `E48C545690` (5 B) | 8 | `22 5B 80 80 80 80 00 04` | −50 … −82 | 9444 / 7 | address mode, 152 s, 16.07 ms per frame; all sticks, 8 buttons (B6), 4 toggle bits (B7) |
-| R1.2 | | nrf1m | | | | | | |
-| R1.3 | | nrf2m | | | | | | |
-| R1.4 | | ble1m | | | | | | |
+| R1.2 | | nrf1m | | | | | | not run (handset found by R1.a) |
+| R1.3 | | nrf2m | | | | | | not run (handset found by R1.a) |
+| R1.4 | | ble1m | | | | | | not run (handset found by R1.a) |
+
+**Sessions 2 … 4 – open runs**
+
+| Run | Result |
+|---|---|
+| R2.1 | |
+| R2.2 | |
+| R2.3 | |
+| R2.4 | |
+| R3.4a / b | |
+| R3.5 | |
+| R3.6 | |
+| R4.2 | |
+| R4.3 | |
+| R4.4 | |
 
 **LED behaviour** (session 3)
 
@@ -339,8 +412,11 @@ it change the address or a byte in the payload?
 
 ## 10. Open questions
 
-- Which radio chip is in the handset and in the receiver? If session 1 finds nothing, photos of
-  both boards (chip markings) decide the next tool (nRF24L01+ module or SDR for 250 kbps / other framing).
+- Which radio chip is in the handset and in the receiver? No longer needed for capturing (the
+  handset sends XN297L-compatible frames at 1 Mbps); only relevant if the receiver's answer (R3.5)
+  turns out to be invisible to the nRF52840 (250 kbps or other framing).
 - Does the SCM8 receiver accept handset and app at the same time, or does it lock into the first
-  source after power-on like the MK4.0?
+  source after power-on like the MK4.0? (R3.6)
 - Is the SCM8 handset the same as the SCM4 handset (same frames, other channel count)?
+- Does the handset return to the bind phase when the SCM8 is switched off? (R3.4)
+- Are the B7 latching states kept over a power cycle of the handset? (R4.4)

@@ -1,8 +1,8 @@
 # Mould King MK4.0 – Capture plan for the original handset / receiver
 
 > Purpose: step-by-step measurement guide that answers the open questions of [MK4.0-Remote.md](MK4.0-Remote.md) (sections 2.2 and 9) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle).
-> Status: **plan – nothing has been measured yet.** This document contains hypotheses and expected results, no results.
-> Last updated: 2026-11-11
+> Status: **plan – no run of this plan has been measured yet.** Answered in the meantime without a run: the receiver's failsafe / LED behaviour (R2.4). New evidence from the [SCM8 handset](../JieStar/SCM8-Remote.md) (same structure, captured 2026-11-13) on the CRC errors (section 3.2), the hopping timing (Q3), the receiver response (Q1) and the control names (Q4). Status per question: section 1.
+> Last updated: 2026-11-13 (status update with the SCM8 results)
 
 ## Contents
 
@@ -24,14 +24,14 @@
 
 Six questions are open after the first captures ([MK4.0-Remote.md](MK4.0-Remote.md) section 9 and the comparison with the app protocol in section 7):
 
-| # | Question |
-|---|---|
-| Q1 | What does the receiver send during binding (channel, address, data rate, content)? |
-| Q2 | Address length: 5-byte address + 2-byte ID, or 4-byte address + 3-byte identity in the payload? |
-| Q3 | Hopping order and dwell time of the four operating channels (2423 / 2441 / 2458 / 2466 MHz) |
-| Q4 | Mapping CH1 … CH6 -> sticks / buttons -> ports A … D |
-| Q5 | Does the searching receiver listen on 2402 MHz (app) **and** 2411 MHz (bind)? |
-| Q6 | Is the handset identity fixed or generated at power-on? |
+| # | Question | Status |
+|---|---|---|
+| Q1 | What does the receiver send during binding (channel, address, data rate, content)? | open; the SCM8 receiver's answer was not seen on 2411 MHz at 1 Mbps either |
+| Q2 | Address length: 5-byte address + 2-byte ID, or 4-byte address + 3-byte identity in the payload? | open, not decidable passively (same for the SCM8) |
+| Q3 | Hopping order and dwell time of the four operating channels (2423 / 2441 / 2458 / 2466 MHz) | open; the SCM8 comparison makes a sniffer artefact unlikely (Q3) |
+| Q4 | Mapping CH1 … CH6 -> sticks / buttons -> ports A … D | open |
+| Q5 | Does the searching receiver listen on 2402 MHz (app) **and** 2411 MHz (bind)? | open |
+| Q6 | Is the handset identity fixed or generated at power-on? | open (LED observation suggests fixed) |
 
 For every question this document gives hypotheses, the setup (which device is on or off, in which
 order), the exact sniffer settings, the expected result and how to interpret it. The runs are
@@ -144,7 +144,11 @@ Wireshark display filters (from the [README](../Tools/xn297l-sniffer/README.md) 
   acknowledgement tests.
 - Promiscuous mode is experimental (no alternating preamble in front of the sync word), frames may
   be missed. Address mode is the robust mode.
-- Native XN297L frames show 6 … 10 % CRC errors (systematic); `ble1m` may be better (session 0 checks it).
+- The MK4.0 handsets show 6 … 10 % CRC errors (systematic) with `nrf1m`. The SCM8 handset, captured
+  with the same dongle and settings, shows only 7 bad frames out of 9451 (0.07 %, R4.1 of the
+  [SCM8 plan](../JieStar/SCM8-Capture-Plan.md)). The errors are therefore specific to the MK4.0
+  handsets (frequency offset / deviation, interpretation), not a general limit of the sniffer;
+  `ble1m` may still be better for the MK4.0 (session 0 checks it).
 - Hopping: dwell has 1 ms granularity (checked against the millisecond uptime), every hop restarts
   the radio (ramp-up) and drops a frame in progress.
 - Capture window after a frame is at most 250 bytes (extra bytes ≤ 200 = 1.6 ms at 1 Mbps).
@@ -246,6 +250,9 @@ the lower share of bad frames (known: 6 … 10 % with `nrf1m`). If both are equa
 - H1d: the reply uses the handset's own bind address but a different length or payload (earlier captures fixed the payload length to 5, which would hide it in the CRC-bad list).
 
 Already ruled out: a 1 Mbps XN297L frame with preamble on 2411 MHz in promiscuous mode, and an acknowledgement within 1.2 ms after a bind telegram.
+The SCM8 handset uses the same bind channel; its receiver's answer was not seen on 2411 MHz at 1 Mbps
+either (R1.b of the [SCM8 plan](../JieStar/SCM8-Capture-Plan.md)), so the answer is likely of the same
+kind for both receivers (interpretation) and a result here probably applies to the SCM8 as well.
 
 **Setup.** Part A (session 2): receiver on and searching (LED blinking), all handsets off. Part B
 (session 3): receiver on and bound, handset 1 switched off for 5 s and on for 5 s, ten times; the
@@ -260,7 +267,7 @@ blinking).
 | R2.1 | receiver just powered on, searching, handsets off | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
 | R2.2 | as R2.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate ble1m` | 120 s |
 | R2.3 | as R2.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf2m` | 120 s |
-| R2.4 | receiver bound to handset 1, handset switched off (expected: receiver stays bound, LED behaviour is an **assumption** – note what you actually see) | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
+| R2.4 | receiver bound to handset 1, handset switched off (known from [MK4.0-Remote.md §1.1](MK4.0-Remote.md#11-led-behaviour): the receiver LED blinks again after a few seconds, the receiver stays bound) | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-83 --dwell 20 --rate nrf1m` | 120 s |
 | R3.1 | bound, handset 1 off/on 10x (5 s each) | `--mode address --address 8C034B4448 --channels 11 --dwell 0 --payload-length 0 --rate nrf1m` | ~2 min |
 | R3.1x | as R3.1 | `--mode address --address 8C034B4448 --channels 11 --dwell 0 --payload-length 5 --extra-bytes 200 --rate nrf1m` | ~2 min |
 | R3.2 | as R3.1 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 11 --dwell 0 --rate nrf2m` | ~2 min |
@@ -340,6 +347,11 @@ plausible: 4 bytes in the bind phase".
 
 All four channels are expected to carry the same payload.
 
+Comparison: the SCM8 handset, captured in address mode on one of its operating channels, shows a
+**constant** period of 16.07 ms (99.8 % of the slots, [SCM8-Remote.md §2.1](../JieStar/SCM8-Remote.md#21-timing)).
+The sniffer therefore does not create irregular gaps by itself; the alternating ~17 / 28 ms gaps of
+the MK4.0 are most likely real (interpretation), which favours H3b or H3c over H3a.
+
 **Setup.** Session 3: receiver and handset 1 bound, sticks untouched (neutral) so that payloads are constant.
 
 **Runs** (single dongle; device timestamps come from one clock):
@@ -379,7 +391,9 @@ app: channel 0 = port A … 3 = port D, see [MK4.0.md](MK4.0.md) section 3). H4c
 |---|---|---|---|---|---|---|
 | R3.9 | address `8C6CDB6E0E` | `23` | 0 | 8 | RATE* | `--mode address --address 8C6CDB6E0E --channels 23 --dwell 0 --payload-length 8 --rate nrf1m` |
 
-**Procedure.** Each action is held 3 s with 3 s neutral in between, in this fixed order, and is
+**Procedure.** First note the markings printed on the handset: the SCM8 handset labels its controls
+with the port letters A … H ([SCM8-Remote.md, Handset](../JieStar/SCM8-Remote.md#handset)), which
+may answer the port part of Q4 directly. Each action is held 3 s with 3 s neutral in between, in this fixed order, and is
 written down with its number (the log has no markers; use the action list together with the
 changing payload):
 
@@ -577,8 +591,11 @@ Not available and therefore **not used** anywhere above: any transmit command, d
 
 ## 11. Open questions
 
-- **Failsafe behaviour (R2.4):** what the receiver LED does with a bound handset switched off is not documented; the observation in R2.4 is to be noted by the user.
-- **`RATE*`:** whether `ble1m` reduces the 6 … 10 % CRC errors is decided by session 0.
+- **Failsafe behaviour (R2.4):** answered – with the bound handset switched off, the receiver LED
+  blinks again after a few seconds; the receiver stays bound and answers the handset's bind
+  telegrams again ([MK4.0-Remote.md §1.1](MK4.0-Remote.md#11-led-behaviour)). Only the exact timeout is still open.
+- **`RATE*`:** whether `ble1m` reduces the 6 … 10 % CRC errors is decided by session 0. The SCM8
+  handset shows almost no CRC errors with `nrf1m`, so the errors are specific to the MK4.0 handsets.
 - **Timing assumptions:** the ~30 µs timestamp resolution and the ~100 µs radio ramp-up are assumptions (section 3.2, Q3).
 - **Follow-ups:** which of F1 … F7 are worth implementing (F1, F2 and F6 are small and help most).
 - **Optional hardware (session 6):** whether extra hardware or opening a device is acceptable if Q1 / Q2 stay open.
