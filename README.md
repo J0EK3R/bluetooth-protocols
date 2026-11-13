@@ -116,6 +116,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 - Byte sequences are written as hex bytes in transmission order (`71 0F 55`), multi-byte values as `0x…`.
 - Every document starts with its sources and a "Last updated" date and ends with a list of open questions.
 - Images live in an `img/` folder next to the document that uses them.
+- Every folder contains a `README.md` that lists and describes its content.
 
 ## Image credits
 
