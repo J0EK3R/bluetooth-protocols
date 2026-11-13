@@ -12,13 +12,33 @@ programs it as a raw 1 Mbps GFSK receiver that synchronises on an XN297L sync wo
 descrambling and the CRC check are done on the host.
 
 ```
- XN297L transmitter        nRF52840 dongle                PC
-┌──────────┬──────┐   RF  ┌───────────────────────┐ USB  ┌────────────────────────────┐
-│ 71 0F 55 │ addr │  ───► │ RADIO, Nrf_1Mbit      │ CDC  │ extcap/xn297l_sniffer.py   │
-│ payload  │ CRC  │       │ sync = preamble or    │ ───► │  → Wireshark (DLT_USER0)   │
-└──────────┴──────┘       │        scrambled addr │ text │  → wireshark/xn297l.lua    │
-                          │ HW CRC/whitening off  │      │    descramble, CRC, decode │
-                          └───────────────────────┘      └────────────────────────────┘
+ XN297L transmitter
+ +----------+---------+---------+-----+
+ | preamble | address | payload | CRC |
+ | 71 0F 55 | 3..5 B  |         |     |
+ +----------+---------+---------+-----+
+       |
+       |  RF, 2.4 GHz GFSK
+       v
+ nRF52840 dongle  (firmware/)
+ +--------------------------------------+
+ | RADIO: nrf1m / ble1m / nrf2m         |
+ | sync word = preamble 71 0F 55        |
+ |             (promiscuous mode)       |
+ |          or scrambled address        |
+ |             (address mode)           |
+ | hardware CRC and whitening off       |
+ +--------------------------------------+
+       |
+       |  USB CDC, text lines
+       v
+ PC
+ +--------------------------------------+
+ | extcap/xn297l_sniffer.py             |
+ |   -> Wireshark (DLT_USER0)           |
+ |   -> wireshark/xn297l.lua            |
+ |      descramble, CRC check, decode   |
+ +--------------------------------------+
 ```
 
 ---
