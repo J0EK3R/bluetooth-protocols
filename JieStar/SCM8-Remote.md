@@ -2,7 +2,7 @@
 
 > Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 (runs R1.a, R1.b, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-13 (handset photos and controls)
+> Last updated: 2026-11-13 (explanation of the sniffer RF channels)
 
 ## Overview
 
@@ -232,6 +232,18 @@ the bind frame matches 2 of 2, the neutral control frame with B7 = `04` matches 
 | Operation | known address | `E48C545690` | `16`, `33`, `50` or `69` (or `16,33,50,69`) | 0 or short | 8 (or 0) |
 
 Data rate `1 Mbps (nRF)` in all cases.
+
+**RF channels.** The sniffer numbers channels as *MHz − 2400*, so `11` = 2411 MHz (bind) and
+`16`, `33`, `50`, `69` = 2416, 2433, 2450, 2469 MHz – the four operating channels the handset hops over.
+There are two ways to capture the operation phase:
+
+- **One channel** (`16`, `33`, `50` **or** `69`, dwell `0`): the sniffer stays on that channel and
+  receives the handset every time its hopping sequence passes it. This gives a complete, regular
+  capture of that channel (R4.1 on 2416 MHz: one frame every 16.07 ms, 99.8 % of the slots).
+  Recommended for decoding.
+- **All four channels** (`16,33,50,69`, short dwell): the sniffer hops itself. Dwell must be > 0,
+  otherwise it stays on the first channel of the list. Sniffer and handset hop independently, so
+  frames are caught only at random; useful to confirm that all four channels are in use.
 
 ---
 
