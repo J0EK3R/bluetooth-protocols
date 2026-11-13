@@ -2,7 +2,7 @@
 
 > Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), three MK4.0 handsets and one MK4.0 receiver, 2026-11-11.
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-11 (link to capture plan)
+> Last updated: 2026-11-13 (explanation of the sniffer RF channels)
 
 ## Overview
 
@@ -227,9 +227,21 @@ Layer-by-layer comparison with side-by-side example frames: [MK4.0 Remote vs. BL
 |---|---|---|---|---|---|
 | Find any handset | promiscuous | – | `0-83` | 30 … 50 ms | 0 (auto) |
 | Bind phase of handset 1 | known address | `8C034B4448` | `11` | 0 | 5 |
-| Operation of handset 1 | known address | `8C6CDB6E0E` | `23,41,58,66` or a single channel | 0 or short | 8 |
+| Operation of handset 1 | known address | `8C6CDB6E0E` | `23`, `41`, `58` or `66` (or `23,41,58,66`) | 0 or short | 8 |
 
 Data rate `1 Mbps (nRF)` in all cases.
+
+**RF channels.** The sniffer numbers channels as *MHz − 2400*, so `11` = 2411 MHz (bind) and
+`23`, `41`, `58`, `66` = 2423, 2441, 2458, 2466 MHz – the four operating channels the handset hops over.
+There are two ways to capture the operation phase:
+
+- **One channel** (`23`, `41`, `58` **or** `66`, dwell `0`): the sniffer stays on that channel and
+  receives the handset every time its hopping sequence passes it. This gives a complete, regular
+  capture of that channel (on 2423 MHz: ~47 frames/s, intervals alternating ~17 ms and ~28 ms).
+  Recommended for decoding.
+- **All four channels** (`23,41,58,66`, short dwell): the sniffer hops itself. Dwell must be > 0,
+  otherwise it stays on the first channel of the list. Sniffer and handset hop independently, so
+  frames are caught only at random; useful to confirm that all four channels are in use.
 
 ---
 

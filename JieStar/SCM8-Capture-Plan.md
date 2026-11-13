@@ -2,7 +2,7 @@
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
 > Status: **in progress** – bind phase (R1.a, R1.b) and operating channels (R3.1) found; results in [SCM8-Remote.md](SCM8-Remote.md). Sessions 2 and 4 are still open.
-> Last updated: 2026-11-13 (result of R4.1)
+> Last updated: 2026-11-13 (result of R4.1, explanation of the sniffer RF channels)
 
 ## Contents
 
@@ -281,8 +281,13 @@ Settings (from R3.1): SCM8 bound to the handset, a motor or LED on as many ports
 |---|---|---|---|
 | R4.1 | `--mode address --address E48C545690 --channels 16 --dwell 0 --payload-length 8 --rate nrf1m` | Known address, Address `E48C545690`, RF channels `16`, Dwell `0`, Payload `8`, 1 Mbps (nRF) | ~5 min |
 
+Channel `16` = 2416 MHz (sniffer channel = MHz − 2400); the four operating channels are
+`16`, `33`, `50`, `69` = 2416, 2433, 2450, 2469 MHz. With `--dwell 0` the sniffer stays on one
+channel and receives every pass of the handset's hopping sequence, see
+[SCM8-Remote.md §8](SCM8-Remote.md#8-capturing-with-the-xn297l-sniffer).
 One channel is enough if all four channels carry the same payload (to be confirmed once with
-`--channels 16,33,50,69 --dwell 1` while moving one stick).
+`--channels 16,33,50,69 --dwell 1` while moving one stick; with a list, dwell must be > 0,
+otherwise the sniffer stays on `16`).
 
 **Result R4.1 (2026-11-13):** handset side done – 4 proportional axes CH1 … CH4, 8 momentary
 buttons (B6 bits), 4 latching states (B7 bits), see [SCM8-Remote.md §5](SCM8-Remote.md#5-control-telegram-8-bytes).

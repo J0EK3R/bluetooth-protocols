@@ -191,8 +191,8 @@ Click the gear icon next to the interface and set:
 | Address | `TX_ADDR` in SPI write order, e.g. `C1C2C3C4C5` (address mode) |
 | Address length | 3 … 5 (promiscuous mode) |
 | Payload length | `0` = find the length via CRC |
-| RF channels | e.g. `2` for 2402 MHz, `2,26,80` for the three BLE advertising frequencies, `0-83` for all channels |
-| Dwell time | ms per channel when hopping |
+| RF channels | channel = MHz − 2400, e.g. `2` for 2402 MHz, `2,26,80` for the three BLE advertising frequencies, `0-83` for all channels |
+| Dwell time | ms per channel when hopping; `0` = stay on the first channel of the list |
 | Data rate | 1 Mbps (nRF), 1 Mbps (BLE deviation), 2 Mbps |
 | Scrambler off | for transmitters with the scrambler disabled |
 | Extra bytes after the frame | additional captured bytes (8 µs each at 1 Mbps), e.g. to look for an acknowledgement sent right after a frame; shown as *Bytes after the frame* |
@@ -271,6 +271,13 @@ DissectorTable.get("xn297l.address"):add("C1C2C3C4C5", p)
    address bytes, then switch to address mode.
 3. **Data rate:** if nothing is received, try `ble1m` (wider deviation) or `nrf2m`
    (old XN297 at 2 Mbps).
+4. **Frequency-hopping transmitters** (e.g. the original handsets, which hop over four
+   channels): set **one** of their channels with dwell `0`. The sniffer then receives the
+   transmitter every time its hopping sequence passes that channel – a complete, regular capture.
+   A list of all channels needs a dwell > 0; because sniffer and transmitter hop independently,
+   frames are then caught only at random. Examples:
+   [MK4.0 handset](../../MouldKing/MK4.0-Remote.md#8-capturing-with-the-xn297l-sniffer),
+   [SCM8 handset](../../JieStar/SCM8-Remote.md#8-capturing-with-the-xn297l-sniffer).
 
 ---
 
