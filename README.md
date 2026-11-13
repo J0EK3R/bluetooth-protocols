@@ -12,47 +12,47 @@ All devices described here except the Mould King **MKH4.0** are controlled via B
 
 The Mould King modules in the first table (except the MK4.0 handset, which transmits native XN297L frames) are controlled via **BLE advertising**: the app encodes its telegrams so that an XN297L-compatible 2.4 GHz frame appears on air (see [XN297L](Chips/XN297L.md)).
 
-| Document | Device | Channels | Connect / Command identifiers |
-|---|---|---|---|
-| [MouldKing/MK3.0.md](MouldKing/MK3.0.md) | MK3.0 module | 2 analog (byte) + 2 on/off functions | `AA…55` / `66…99` |
-| [MouldKing/MK3.8.md](MouldKing/MK3.8.md) | MK3.8 module | 4 analog (nibble) + left/right | `B1…C1` / `81…C2` |
-| [MouldKing/MK4.0.md](MouldKing/MK4.0.md) | MK4.0 receiver | 4 analog (nibble) × 3 devices, shared telegram | `AD…52` / `7D…82` |
-| [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz; [capture plan](MouldKing/MK4.0-Capture-Plan.md) for the open questions |
-| [MouldKing/MK5.0.md](MouldKing/MK5.0.md) | MK5.0 tank module | drive, turret, shot, turn + turret lock | `AD…52` / `7D…82` (same as MK4.0) |
-| [MouldKing/MK6.0.md](MouldKing/MK6.0.md) | MK6.0 module | 6 analog (byte) × 3 devices, telegram per device | `6D…92` / `61…63` |
+| Image | Document | Device | Channels | Connect / Command identifiers |
+|---|---|---|---|---|
+| <img src="MouldKing/img/mk3_image.png" alt="" height="48"> | [MouldKing/MK3.0.md](MouldKing/MK3.0.md) | MK3.0 module | 2 analog (byte) + 2 on/off functions | `AA…55` / `66…99` |
+| <img src="MouldKing/img/mk3_8_image.png" alt="" height="48"> | [MouldKing/MK3.8.md](MouldKing/MK3.8.md) | MK3.8 module | 4 analog (nibble) + left/right | `B1…C1` / `81…C2` |
+| <img src="MouldKing/img/mk4_image.png" alt="" height="48"> | [MouldKing/MK4.0.md](MouldKing/MK4.0.md) | MK4.0 receiver | 4 analog (nibble) × 3 devices, shared telegram | `AD…52` / `7D…82` |
+|  | [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz; [capture plan](MouldKing/MK4.0-Capture-Plan.md) for the open questions |
+| <img src="MouldKing/img/mk5_image.png" alt="" height="48"> | [MouldKing/MK5.0.md](MouldKing/MK5.0.md) | MK5.0 tank module | drive, turret, shot, turn + turret lock | `AD…52` / `7D…82` (same as MK4.0) |
+| <img src="MouldKing/img/mk6_image.png" alt="" height="48"> | [MouldKing/MK6.0.md](MouldKing/MK6.0.md) | MK6.0 module | 6 analog (byte) × 3 devices, telegram per device | `6D…92` / `61…63` |
 
 Comparison of the original MK4.0 handset and the app: [MouldKing/MK4.0-Remote-vs-BLE.md](MouldKing/MK4.0-Remote-vs-BLE.md) – layer-by-layer comparison with side-by-side on-air example frames (shared XN297L frame layer, different frequency, address and telegram format).
 
 The MKH4.0 hub is a real BLE peripheral and is controlled via a **GATT connection**:
 
-| Document | Device | Channels | Transport / commands |
-|---|---|---|---|
-| [MouldKing/MKH4.0.md](MouldKing/MKH4.0.md) | MKH4.0 hub | 4 ports, normal motor (speed) or servo (absolute position, encoder motor) | GATT service `0xAE3A` (write `0xAE3B`, notify `0xAE3C`), ASCII messages `T…W`, all known commands listed |
+| Image | Document | Device | Channels | Transport / commands |
+|---|---|---|---|---|
+| <img src="MouldKing/img/mkh4_image.png" alt="" height="48"> | [MouldKing/MKH4.0.md](MouldKing/MKH4.0.md) | MKH4.0 hub | 4 ports, normal motor (speed) or servo (absolute position, encoder motor) | GATT service `0xAE3A` (write `0xAE3B`, notify `0xAE3C`), ASCII messages `T…W`, all known commands listed |
 
 ### JIESTAR
 
 Same radio layer as Mould King (BLE advertising → XN297L frame, manufacturer ID `0xFFF0`).
 
-| Document | Device | Channels | Connect / Command identifiers |
-|---|---|---|---|
-| [JieStar/SCM4.md](JieStar/SCM4.md) | SCM4 Smart Creative Module | 4 analog (nibble) × 3 devices, slot = BLE channel 37/38/39 | `A4…5B` / `40…BF` |
-| [JieStar/SCM8.md](JieStar/SCM8.md) | SCM8 Smart Creative Module | 8 analog (nibble) × 3 devices, telegram per device | `A4…5B` / `41…43` |
-| [JieStar/SCM8-Remote.md](JieStar/SCM8-Remote.md) | SCM8 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 further bytes, 1 receiver, binding | bind on 2411 MHz, hopping 2416/2433/2450/2469 MHz; [capture plan](JieStar/SCM8-Capture-Plan.md) for the open questions |
+| Image | Document | Device | Channels | Connect / Command identifiers |
+|---|---|---|---|---|
+| <img src="JieStar/img/jiestarscm4_image.png" alt="" height="48"> | [JieStar/SCM4.md](JieStar/SCM4.md) | SCM4 Smart Creative Module | 4 analog (nibble) × 3 devices, slot = BLE channel 37/38/39 | `A4…5B` / `40…BF` |
+| <img src="JieStar/img/jiestarscm8_image.png" alt="" height="48"> | [JieStar/SCM8.md](JieStar/SCM8.md) | SCM8 Smart Creative Module | 8 analog (nibble) × 3 devices, telegram per device | `A4…5B` / `41…43` |
+| <img src="JieStar/img/scm8_remote_front.png" alt="" height="48"> | [JieStar/SCM8-Remote.md](JieStar/SCM8-Remote.md) | SCM8 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 further bytes, 1 receiver, binding | bind on 2411 MHz, hopping 2416/2433/2450/2469 MHz; [capture plan](JieStar/SCM8-Capture-Plan.md) for the open questions |
 
 ### PowerBox
 
 Same radio layer as Mould King, manufacturer ID `0xFF00`.
 
-| Document | Device | Channels | Connect / Command identifiers |
-|---|---|---|---|
-| [PowerBox/A-Series.md](PowerBox/A-Series.md) | A Series | 4 analog (nibble) | `A4…5B` / `40…BF` |
-| [PowerBox/M-Battery.md](PowerBox/M-Battery.md) | M Battery | 1 analog (special byte, sent twice) | `A4…5B` / `40…BF` |
+| Image | Document | Device | Channels | Connect / Command identifiers |
+|---|---|---|---|---|
+| <img src="PowerBox/img/powerboxaseries_image.png" alt="" height="48"> | [PowerBox/A-Series.md](PowerBox/A-Series.md) | A Series | 4 analog (nibble) | `A4…5B` / `40…BF` |
+| <img src="PowerBox/img/powerboxmbattery_image.png" alt="" height="48"> | [PowerBox/M-Battery.md](PowerBox/M-Battery.md) | M Battery | 1 analog (special byte, sent twice) | `A4…5B` / `40…BF` |
 
 ### CaDA
 
-| Document | Device | Channels | Notes |
-|---|---|---|---|
-| [CaDA/RaceCar.md](CaDA/RaceCar.md) | RaceCar (Rev1 and Rev2) | throttle, steering (byte), front/rear lights | Rev1: CaDA encryption + XN297L frame (address "CAR") on BLE channel 38; Rev2: plain manufacturer data; pairing via app identifier |
+| Image | Document | Device | Channels | Notes |
+|---|---|---|---|---|
+| <img src="CaDA/img/cada_racecar_image.png" alt="" height="48"> | [CaDA/RaceCar.md](CaDA/RaceCar.md) | RaceCar (Rev1 and Rev2) | throttle, steering (byte), front/rear lights | Rev1: CaDA encryption + XN297L frame (address "CAR") on BLE channel 38; Rev2: plain manufacturer data; pairing via app identifier |
 
 ### Chips
 
