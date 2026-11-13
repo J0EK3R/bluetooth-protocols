@@ -375,7 +375,6 @@ Own photos of the receiver module (straightened, background removed; no board an
 <img src="img/scm8_receiver_ports.png" alt="JIESTAR SCM8 receiver, connector side" height="300">
 
 <img src="img/scm8_receiver_overview.png" alt="JIESTAR SCM8 receiver, overview" height="260">
-<img src="img/scm8_receiver_back.png" alt="JIESTAR SCM8 receiver, back side" height="260">
 
 | Item | Observation |
 |---|---|
