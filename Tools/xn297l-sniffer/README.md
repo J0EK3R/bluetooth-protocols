@@ -12,13 +12,13 @@ programs it as a raw 1 Mbps GFSK receiver that synchronises on an XN297L sync wo
 descrambling and the CRC check are done on the host.
 
 ```
- XN297L transmitter           nRF52840 dongle                 PC
-┌──────────────────┐  RF   ┌───────────────────────┐ USB  ┌──────────────────────────┐
-│ 71 0F 55 │ addr │ ────► │ RADIO, Nrf_1Mbit       │ CDC  │ extcap/xn297l_sniffer.py │
-│ payload  │ CRC  │       │ sync = preamble or     │ ───► │  → Wireshark (DLT_USER0) │
-└──────────────────┘       │        scrambled addr  │ text │  → wireshark/xn297l.lua  │
-                           │ HW CRC/whitening off   │      │    descramble, CRC, decode│
-                           └───────────────────────┘      └──────────────────────────┘
+ XN297L transmitter        nRF52840 dongle                PC
+┌──────────┬──────┐   RF  ┌───────────────────────┐ USB  ┌────────────────────────────┐
+│ 71 0F 55 │ addr │  ───► │ RADIO, Nrf_1Mbit      │ CDC  │ extcap/xn297l_sniffer.py   │
+│ payload  │ CRC  │       │ sync = preamble or    │ ───► │  → Wireshark (DLT_USER0)   │
+└──────────┴──────┘       │        scrambled addr │ text │  → wireshark/xn297l.lua    │
+                          │ HW CRC/whitening off  │      │    descramble, CRC, decode │
+                          └───────────────────────┘      └────────────────────────────┘
 ```
 
 ---
