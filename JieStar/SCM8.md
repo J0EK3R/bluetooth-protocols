@@ -1,7 +1,7 @@
 # JIESTAR SCM8 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/JieStar/JieStarSCM8.cs`, `JieStarBase.cs`, `JieStar.cs`, `JieStarDeviceManager.cs`, `Protocols/JieStarProtocol.cs`, `Protocols/CryptTools.cs`, the platform `JieStarPlatformService.cs` files, `UI/Controls/Devices/JieStarSCM8ChannelSelectorView.xaml` and `JieStarSCM8DatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-13 (receiver photos, link to handset protocol)
 
 <img src="img/jiestarscm8_image.png" alt="JIESTAR SCM8 module" height="180">
 
@@ -370,9 +370,23 @@ The first 8 encoded bytes (preamble + address) are identical for all telegrams o
 
 ## 8. Hardware
 
-No board analysis yet. The BC2 image shows a black module with eight output connectors (three on each side, two at the bottom), a USB-C socket and a push button at the top.
+Own photos of the receiver module (straightened, background removed; no board analysis yet, the case has not been opened):
 
-<img src="img/jiestarscm8_image.png" alt="JIESTAR SCM8 module" height="300">
+<img src="img/scm8_receiver_ports.png" alt="JIESTAR SCM8 receiver, connector side" height="300">
+
+<img src="img/scm8_receiver_overview.png" alt="JIESTAR SCM8 receiver, overview" height="260">
+<img src="img/scm8_receiver_back.png" alt="JIESTAR SCM8 receiver, back side" height="260">
+
+| Item | Observation |
+|---|---|
+| Outputs | 8 sockets **A … H**: lower row `A`, `C`, `E`, `G`, upper row `B`, `D`, `F`, `H` (the upper labels are printed upside down); `G` and `H` sit turned by 90° at the right end |
+| Power | USB-C socket marked `5V ⎓ 2A` (built-in battery is likely, **not verified**) |
+| Controls | one square push button next to the USB-C socket |
+| Other | two small holes on the connector side (one next to the USB-C socket, one between the pin-hole rows) – status LED and/or microphone, **not verified** |
+| Mechanics | Technic pin holes on the connector side and on the short side, stud-tube pattern on the back side |
+
+Port names on the receiver match the markings on the original handset ([SCM8-Remote.md](SCM8-Remote.md#handset)):
+sticks A … D, buttons E … H.
 
 ---
 
@@ -382,4 +396,5 @@ No board analysis yet. The BC2 image shows a black module with eight output conn
 - How the device slot is selected on the receiver.
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
 - Interaction with an [SCM4](SCM4.md) or [PowerBox](../PowerBox/A-Series.md) receiver in range: the Connect identifiers `A4 … 5B` are shared.
-- Hardware details (section 8).
+- Hardware details: radio chip and board (case not opened, section 8).
+- ~~Protocol of the original 2.4 GHz handset~~ – captured: [SCM8-Remote.md](SCM8-Remote.md) (open points in its section 9).

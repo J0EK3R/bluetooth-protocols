@@ -37,6 +37,7 @@ Same radio layer as Mould King (BLE advertising → XN297L frame, manufacturer I
 |---|---|---|---|
 | [JieStar/SCM4.md](JieStar/SCM4.md) | SCM4 Smart Creative Module | 4 analog (nibble) × 3 devices, slot = BLE channel 37/38/39 | `A4…5B` / `40…BF` |
 | [JieStar/SCM8.md](JieStar/SCM8.md) | SCM8 Smart Creative Module | 8 analog (nibble) × 3 devices, telegram per device | `A4…5B` / `41…43` |
+| [JieStar/SCM8-Remote.md](JieStar/SCM8-Remote.md) | SCM8 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 further bytes, 1 receiver, binding | bind on 2411 MHz, hopping 2416/2433/2450/2469 MHz; [capture plan](JieStar/SCM8-Capture-Plan.md) for the open questions |
 
 ### PowerBox
 
@@ -79,6 +80,8 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 ├── JieStar/
 │   ├── SCM4.md
 │   ├── SCM8.md
+│   ├── SCM8-Remote.md
+│   ├── SCM8-Capture-Plan.md
 │   └── img/
 ├── PowerBox/
 │   ├── A-Series.md
