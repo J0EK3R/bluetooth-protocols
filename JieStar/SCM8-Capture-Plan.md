@@ -2,7 +2,7 @@
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
 > Status: **in progress** – S1, S2 and S4 answered (bind phase: 2411 MHz only), S3, S5 and S6 partly (handset side of the telegram decoded, identity fixed); open: comparison with the 2nd handset H2 and binding (S5, new runs R2.4, R3.7, R3.8), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
-> Last updated: 2026-11-14 (results R2.1 … R2.3, R2.4a; plan extended for the 2nd handset H2)
+> Last updated: 2026-11-14 (results R2.1 … R2.4c – session 2 done; plan extended for the 2nd handset H2)
 
 ## Contents
 
@@ -84,7 +84,7 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 |---|---|---|---|---|---|
 | 0 BLE check | handset on, receiver off | R0.1, R0.2 | S1 | 10 min | **skipped** – R1.a found XN297L frames, S1 answered |
 | 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
-| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **partly** – R2.1 … R2.3, R2.4a done, R2.4b not needed, R2.5 answered by R1.b; R2.4c open |
+| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **done** – R2.1 … R2.3, R2.4a, R2.4c done, R2.4b not needed, R2.5 answered by R1.b |
 | 3 Handset + receiver | receiver on, binding | R3.1 … R3.8 | S4, S5 | 45 min | **partly** – R3.1 done; R3.4 … R3.8 and the LED table open |
 | 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1 done (handset side); R4.2 … R4.4 open |
 
@@ -349,6 +349,33 @@ second handset (R2.4).
 - Because the first four address bytes on air are common, the 4-byte address `834A5834` in known
   address mode receives the bind telegrams of **every** handset without the losses of the
   promiscuous mode (used for R2.4c and R3.8).
+
+### 6.5 Result R2.4c (2026-11-14) – H1 and H2 at the same time
+
+**Setup:** run in **promiscuous** mode (address length 5, Payload `0`, RF channels `11`, Dwell `0`,
+1 Mbps (nRF)) instead of the planned known address `834A5834` – the losses of the promiscuous mode
+do not matter for this question. SCM8 receiver off. H2 was already on at the start, H1 was switched
+on at t ≈ 2.5 s.
+
+**Measured:**
+
+| Item | H1 | H2 |
+|---|---|---|
+| `TX_ADDR` / payload | `E4834A5834` / `22 5B 00` | `80834A5834` / `00 63 00` |
+| Frames with valid CRC | 250 (t = 2.5 … 12.5 s) | 293 (t = 0 … 12.5 s) |
+| Received slots (promiscuous) | 50 % | 47 % |
+| Period | 20.0834 ms | 20.0835 ms |
+| RSSI | −54 … −65 dBm | −48 … −55 dBm |
+
+- Other frames: 4 noise hits (−96 … −100 dBm, random addresses, no CRC).
+- **Phase offset:** H2 sends 13.92 … 14.05 ms after H1 (i.e. ≈ 6.1 ms before the next H1 frame),
+  constant over the 10 s of the run; the closest H1 / H2 frames were 5.98 ms apart.
+
+**Interpretation:** both handsets send on the same channel with the same bind address prefix on
+two **independent** 20.083 ms grids; there is no coordination and no reaction of one handset to
+the other. The phase offset is set by the power-on time and drifts only with the clock difference
+of the two handsets (here < 0.1 µs per period, i.e. too small to measure in 10 s). If the grids met,
+the frames would collide; with ~6 ms distance there were no collisions in this run.
 ---
 
 ## 7. Session 3 – Handset + receiver
@@ -499,7 +526,7 @@ same start value (R3.1 started with `0F`) → reset at power-on.
 | R2.3 | 9 power-ons captured (8 off phases of 4.0 … 7.4 s), 2019 frames, all CRC ok, always `E4834A5834` / `22 5B 00` → identity fixed (section 6.3) |
 | R2.4a (H2) | 727 frames CRC ok on 2411 MHz: `TX_ADDR` `80834A5834`, payload `00 63 00` → H2 differs from H1 only in identity byte and ID (section 6.4) |
 | R2.4b | not needed |
-| R2.4c | |
+| R2.4c | H1 and H2 on two independent 20.083 ms grids on 2411 MHz, phase offset constant ≈ 14 ms, no collisions (section 6.5) |
 | R3.4a / b | |
 | R3.5 | |
 | R3.6 | |
