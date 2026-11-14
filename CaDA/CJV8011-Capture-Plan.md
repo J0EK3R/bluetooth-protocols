@@ -1,8 +1,8 @@
 # CaDA CJV8011 / CJV1010 – Capture plan for the 2.4 GHz radio link
 
-> Purpose: step-by-step measurement guide for the radio link between the [CJV8011](CJV8011.md) handset and the [CJV1010](CJV1010.md) receiver, mainly with the nRF52840 MDK USB dongle ([XN297L sniffer](../Tools/xn297l-sniffer/README.md) firmware in raw sync mode, [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md)); SDR and logic analyzer as fallbacks.
+> Purpose: step-by-step measurement guide for the radio link between the [CJV8011](CJV8011.md) handset and the [CJV1010](CJV1010.md) receiver, mainly with the nRF52840 MDK USB dongle ([XN297L sniffer](../Tools/xn297l-sniffer/README.md) in raw mode, [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md)); SDR and logic analyzer as fallbacks.
 > Status: **planned** – no run done yet. Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
-> Last updated: 2026-11-14
+> Last updated: 2026-11-14 (raw mode of the console tool instead of the separate `raw.py` script)
 
 ## Contents
 
@@ -69,8 +69,9 @@ probably not available:
 
 The firmware already supports this: the serial command `sync <hex>` takes any 3 … 5 bytes and
 captures up to 250 bytes MSB first, without whitening and without CRC check
-([serial protocol](../Tools/xn297l-sniffer/README.md#24-serial-protocol)). Only the console tool
-`xn297l_sniffer.py` does not expose a raw sync mode yet – use the small script in section 3.
+([serial protocol](../Tools/xn297l-sniffer/README.md#24-serial-protocol)). The console tool /
+Wireshark extcap `xn297l_sniffer.py` (1.1.0) exposes this as **raw mode** (`--mode raw --sync
+<hex> --raw-length <n>`, [sync modes](../Tools/xn297l-sniffer/README.md#1-sync-modes)).
 
 ---
 
@@ -84,37 +85,25 @@ captures up to 250 bytes MSB first, without whitening and without CRC check
 | CJV8011 handset **H1** (2 × AA, fresh), mark it; a 2nd handset **H2** if available | all sessions; H2 for R3.4 |
 | CJV1010 receiver **E1** (charged); a 2nd receiver **E2** if available | sessions 2 … 4; E2 for R3.5 |
 | motors or LEDs on all four ports (red, blue, black, yellow) | session 4 |
-| PC with Python 3 + `pyserial` | all sessions |
+| PC with Python 3 + `pyserial`, `xn297l_sniffer.py` **1.1.0** or newer (raw mode) | all sessions |
 | *optional:* SDR covering 2.4 GHz (HackRF One, ADALM-Pluto, …) + [Universal Radio Hacker](https://github.com/jopohl/urh) or inspectrum | session 5 |
 | *optional:* logic analyzer (≥ 8 channels, ≥ 24 MS/s) + PulseView / sigrok, fine probes | session 6 |
 
 Flashing: double-click the dongle button (LED green, UF2 drive appears), copy the `.uf2` of the
 firmware the session needs.
 
-**Raw console script** (until the console tool gets a raw mode). Save it outside the repository,
-e.g. as `raw.py`:
-
-```python
-# raw.py <PORT> <command> [<command> ...]  – sends the commands, then prints every line
-import sys, serial
-s = serial.Serial(sys.argv[1], 115200, timeout=1)
-s.dtr = True
-for c in sys.argv[2:]:
-    s.write((c + "\n").encode())
-while True:
-    line = s.readline().decode(errors="replace")
-    if line:
-        print(line, end="", flush=True)
-```
-
-Every run then looks like this (replace `<PORT>`, e.g. `COM5`; stop with Ctrl+C):
+**Console command** (run from the repository root, replace `<PORT>`, e.g. `COM5`; stop with
+Ctrl+C):
 
 ```bash
-python -u raw.py <PORT> stop "sync AAAAAA" "len 64" "ch 0-83" "dwell 50" "rate nrf1m" start | tee R1.1.log
+RAW="python -u Tools/xn297l-sniffer/extcap/xn297l_sniffer.py --print --port <PORT> --mode raw"
+# each run: $RAW <options> | tee R<run>.log
+$RAW --sync AAAAAA --raw-length 64 --channels 0-83 --dwell 50 --rate nrf1m | tee R1.1.log
 ```
 
-Output lines: `P <device time µs> <channel> <RSSI dBm> <sync word + captured bytes>` (channel =
-MHz − 2400).
+Output lines: `<device time> <frequency> <RSSI>  raw <sync word> | <captured bytes>`. In Wireshark
+choose *Sync mode* = *Raw (any sync word)* and set *Sync word* and *Capture length*; the
+captures are shown as protocol *RAW 2.4G*.
 
 For every run note what you did and when (the log has device time only). Raw logs are **not**
 committed; send them to me for the analysis.
@@ -163,7 +152,7 @@ Cheap checks with the existing tools before the raw search.
 
 ## 6. Session 1 – Find the transmitter (preamble sniffing)
 
-Firmware: **XN297L sniffer**, raw sync via `raw.py`. Sweep all 84 channels with 50 ms dwell (one
+Firmware: **XN297L sniffer**, console tool in raw mode. Sweep all 84 channels with 50 ms dwell (one
 sweep ≈ 4.2 s). Each run 2 minutes; operate the controls of the handset continuously (all four
 channels, both directions) so that it transmits as much as possible.
 
@@ -182,10 +171,11 @@ channels, both directions) so that it transmits as much as possible.
 Command pattern (R1.1):
 
 ```bash
-python -u raw.py <PORT> stop "sync AAAAAA" "len 64" "ch 0-83" "dwell 50" "rate nrf1m" start | tee R1.1.log
+$RAW --sync AAAAAA --raw-length 64 --channels 0-83 --dwell 50 --rate nrf1m | tee R1.1.log
 ```
 
-What to look for (I do the analysis, you only send the logs):
+The other runs only change `--sync` (`AAAAAA` / `555555`) and `--rate` (`nrf1m` / `ble1m` /
+`nrf2m`). What to look for (I do the analysis, you only send the logs):
 
 | Observation | Meaning |
 |---|---|
@@ -195,8 +185,8 @@ What to look for (I do the analysis, you only send the logs):
 | captures only in R1.7 / R1.8 with receiver on | the handset only transmits when a receiver answers, or the receiver transmits too (C8) |
 | nothing above the R1.0 noise level in any run | preamble too short or data rate < 1 Mbps → session 5 (SDR) or session 6 |
 
-If the hits are rare but present on one channel, repeat that setting with `ch <n>` and `dwell 0`
-for 1 minute to get more captures.
+If the hits are rare but present on one channel, repeat that setting with `--channels <n>
+--dwell 0` for 1 minute to get more captures.
 
 ---
 
@@ -207,9 +197,9 @@ sync word as nRF sync, a single channel first, then all found channels.
 
 | Run | State | Settings | Duration |
 |---|---|---|---|
-| R2.1 | handset on, receiver off, **no control touched** | `sync <SW>`, `len 40`, `ch <n>`, `dwell 0` | 1 min |
-| R2.2 | same, all found channels | `ch <n1>,<n2>,…`, `dwell 0` per channel in turn (or `dwell 2000`) | 2 min |
-| R2.3 | handset on, receiver on and working | `ch <n>`, `dwell 0` | 2 min |
+| R2.1 | handset on, receiver off, **no control touched** | `$RAW --sync <SW> --raw-length 40 --channels <n> --dwell 0` | 1 min |
+| R2.2 | same, all found channels | `--channels <n1>,<n2>,… --dwell 2000` | 2 min |
+| R2.3 | handset on, receiver on and working | `--channels <n> --dwell 0` | 2 min |
 | R2.4 | same, channel 1 plus, held 10 s, release, channel 1 minus, held 10 s | same | 1 min |
 | R2.5 | handset off, receiver on | same | 1 min |
 | R2.6 | handset on, receiver on, 2 m distance, then 20 cm | same | 1 min |
@@ -221,8 +211,8 @@ bytes change with R2.4 (C6 preview), acknowledgement frames of the receiver in R
 A sync word and frame layout that match the LT8900 datasheet would answer C9 (*interpretation*
 until confirmed by session 6).
 
-Tool follow-up: once the sync word is known, add a raw mode (`--mode raw --sync <hex>`) and, if
-the CRC is identified, a decoder to `xn297l_sniffer.py` / the Wireshark dissector.
+Tool follow-up: once the frame layout and the CRC are identified, add a decoder for the CaDA
+frames to `xn297l_sniffer.py` / the Wireshark dissector (raw mode only shows the bytes).
 
 ---
 
@@ -242,7 +232,7 @@ The pairing procedure is not yet documented. First find out *how* pairing is don
 
 | Run | State | Settings | Duration |
 |---|---|---|---|
-| R3.1 | pairing sequence from R3.0, start the capture **before** switching on | session 2 settings, all found channels; additionally the sweep from session 1 (`sync` = preamble) to find a separate bind channel | 1 min |
+| R3.1 | pairing sequence from R3.0, start the capture **before** switching on | session 2 settings, all found channels; additionally the sweep from session 1 (`--sync` = preamble) to find a separate bind channel | 1 min |
 | R3.2 | same, 3 repetitions with power cycle (same handset) | same | 3 min |
 | R3.3 | normal power-on without pairing (already paired) | same | 1 min |
 | R3.4 | pairing with H2 (if available) | same | 1 min |

@@ -167,6 +167,70 @@ class PythonDecoderTests(unittest.TestCase):
         self.assertEqual(hdr.hex(), "010102c4050a000078563412")
 
 
+class FakeDongle:
+    """Records the commands that configure() sends."""
+
+    def __init__(self):
+        self.commands = []
+
+    def command(self, cmd):
+        self.commands.append(cmd)
+
+
+class RawModeTests(unittest.TestCase):
+
+    def configure(self, *argv):
+        args = xs.build_parser().parse_args(["--print", "--port", "X", *argv])
+        dongle = FakeDongle()
+        return xs.configure(dongle, args), dongle.commands
+
+    def test_configure_raw(self):
+        params, cmds = self.configure("--mode", "raw", "--sync", "55 55 55",
+                                      "--raw-length", "100", "--channels", "0-83",
+                                      "--dwell", "50", "--rate", "nrf2m")
+        self.assertEqual(cmds, ["stop", "sync 555555", "len 100", "ch 0-83",
+                                "dwell 50", "rate nrf2m", "start"])
+        self.assertTrue(params["raw"])
+        self.assertFalse(params["promiscuous"])
+        self.assertEqual(params["addr_len"], 3)
+        self.assertEqual(params["payload_len"], 0)
+
+    def test_configure_raw_defaults(self):
+        _, cmds = self.configure("--mode", "raw")
+        self.assertIn("sync AAAAAA", cmds)
+        self.assertIn("len 64", cmds)
+
+    def test_configure_raw_invalid(self):
+        with self.assertRaises(ValueError):
+            self.configure("--mode", "raw", "--sync", "AAAA")            # 2 bytes
+        with self.assertRaises(ValueError):
+            self.configure("--mode", "raw", "--sync", "AAAAAAAAAAAA")    # 6 bytes
+        with self.assertRaises(ValueError):
+            self.configure("--mode", "raw", "--raw-length", "251")
+
+    def test_other_modes_unchanged(self):
+        params, cmds = self.configure("--mode", "promiscuous")
+        self.assertTrue(params["promiscuous"])
+        self.assertFalse(params["raw"])
+        self.assertIn("sync 710F55", cmds)
+        params, cmds = self.configure("--mode", "address")
+        self.assertFalse(params["promiscuous"] or params["raw"])
+        self.assertIn("sync 2675882844", cmds)
+
+    def test_raw_line_and_format(self):
+        _, _, _, data = xs.parse_packet_line("P 1000 40 -55 AAAAAA0380A5C3")
+        params = {"raw": True, "promiscuous": False}
+        self.assertEqual(xs.frame_bytes(data, params), data)        # passed on unchanged
+        self.assertEqual(xs.format_raw(data, 3), "AA AA AA | 03 80 A5 C3")
+
+    def test_raw_pseudo_header_flag(self):
+        params = {"scrambled": True, "promiscuous": False, "raw": True,
+                  "addr_len": 3, "payload_len": 0, "rate": 1}
+        hdr = xs.pseudo_header(params, 40, -55, 1000)
+        self.assertEqual(hdr[1], 0x05)                              # scrambler bit + raw bit
+        self.assertEqual(hdr[4], 3)                                 # sync word length
+
+
 # ---------------------------------------------------------------------------
 # Lua core tests (same frames, same expectations)
 # ---------------------------------------------------------------------------

@@ -59,12 +59,13 @@ descrambling and the CRC check are done on the host.
 ## 1. Sync modes
 
 The nRF52840 needs a sync word (its "address", 3 … 5 bytes) to detect a packet.
-Two modes are available:
+Three modes are available:
 
 | Mode | Sync word | Captured | Use |
 |---|---|---|---|
 | **address** (default) | the XN297L address as it appears on air (byte order reversed, scrambled) | payload + CRC | known address – robust |
 | **promiscuous** | the XN297L preamble `71 0F 55` | address + payload + CRC | unknown address – **experimental** |
+| **raw** | any 3 … 5 bytes (`--sync`, default `AA AA AA`) | `--raw-length` bytes (default 64), shown undecoded | unknown, **non-XN297L** transmitters – find frequency and sync word |
 
 In address mode the last preamble byte `0x55` serves as the nRF preamble (an
 alternating bit pattern, as the nRF radio expects). In promiscuous mode there is no alternating preamble in
@@ -77,6 +78,14 @@ Example: `TX_ADDR` = `C1 C2 C3 C4 C5` → on air `C5 C4 C3 C2 C1` → scrambled
 
 If the payload length is not given, the decoder tries every length and takes the first
 one with a valid CRC.
+
+**Raw mode** does no XN297L processing at all: no descrambling, no address, no CRC search. It
+prints / records the sync word and the captured bytes as received (MSB first). Typical use is a
+transmitter whose sync word is unknown: with the alternating preamble `AA AA AA` or `55 55 55`
+as sync word, every GFSK frame at the selected data rate with a long enough preamble is
+captured, and the captured bytes begin with the transmitter's own sync word. Once that is known,
+use it as `--sync` to receive the frames reliably. Example: the
+[CaDA CJV8011 capture plan](../../CaDA/CJV8011-Capture-Plan.md).
 
 ---
 
@@ -187,7 +196,7 @@ Click the gear icon next to the interface and set:
 | Option | Meaning |
 |---|---|
 | Serial port | port of the dongle |
-| Sync mode | *Known address* or *Promiscuous* (section 1) |
+| Sync mode | *Known address*, *Promiscuous* or *Raw* (section 1) |
 | Address | `TX_ADDR` in SPI write order, e.g. `C1C2C3C4C5` (address mode) |
 | Address length | 3 … 5 (promiscuous mode) |
 | Payload length | `0` = find the length via CRC |
@@ -196,6 +205,8 @@ Click the gear icon next to the interface and set:
 | Data rate | 1 Mbps (nRF), 1 Mbps (BLE deviation), 2 Mbps |
 | Scrambler off | for transmitters with the scrambler disabled |
 | Extra bytes after the frame | additional captured bytes (8 µs each at 1 Mbps), e.g. to look for an acknowledgement sent right after a frame; shown as *Bytes after the frame* |
+| Sync word (raw mode) | 3 … 5 bytes, on-air order, MSB first, e.g. `AAAAAA`, `555555` |
+| Capture length (raw mode) | bytes captured after the sync word, 1 … 250 |
 
 Display filter examples:
 
@@ -204,7 +215,11 @@ xn297l.crc_ok == 1
 xn297l.address == "C1:C2:C3:C4:C5"
 xn297l.payload_len == 10
 xn297l.hdr.freq == 2402
+xn297l.hdr.flags.raw == 1
 ```
+
+Raw captures are shown with the protocol *RAW 2.4G* and the fields *Sync word (raw capture)* and
+*Bytes after the sync word (raw capture)*.
 
 ### 3.3 Console mode (without Wireshark)
 
@@ -212,24 +227,32 @@ xn297l.hdr.freq == 2402
 python extcap/xn297l_sniffer.py --list-ports
 python extcap/xn297l_sniffer.py --print --port COM5 --mode address --address C1C2C3C4C5 --channels 2 --dwell 0
 python extcap/xn297l_sniffer.py --print --port COM5 --mode promiscuous --show-bad
+python extcap/xn297l_sniffer.py --print --port COM5 --mode raw --sync AAAAAA --raw-length 64 --channels 0-83 --dwell 50
 ```
 
 ```
     1.258836s 2402 MHz  -55 dBm  addr C1:C2:C3:C4:C5  CRC ok   len  8  payload AD 12 34 80 80 80 4F 52
 ```
 
+Raw mode (sync word `|` captured bytes):
+
+```
+    0.001000s 2440 MHz  -55 dBm  raw AA AA AA | 03 80 A5 C3 …
+```
+
 ### 3.4 Record format (DLT_USER0)
 
 Every record starts with a 12-byte pseudo header (little endian), followed by the
-on-air bytes beginning with the first address byte (MSB-first notation, still scrambled):
+on-air bytes beginning with the first address byte (MSB-first notation, still scrambled);
+in raw mode beginning with the sync word:
 
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | version (`1`) |
-| 1 | 1 | flags: bit 0 = scrambler on, bit 1 = promiscuous capture |
+| 1 | 1 | flags: bit 0 = scrambler on, bit 1 = promiscuous capture, bit 2 = raw capture |
 | 2 | 1 | RF channel (MHz − 2400) |
 | 3 | 1 | RSSI in dBm (signed) |
-| 4 | 1 | address length |
+| 4 | 1 | address length (raw mode: sync word length) |
 | 5 | 1 | payload length (`0` = unknown) |
 | 6 | 1 | data rate: 0 = nrf1m, 1 = nrf2m, 2 = ble1m |
 | 7 | 1 | reserved |
@@ -306,6 +329,7 @@ correctly by both the Python and the Lua decoder (Lua 5.1 … 5.4).
 | Native XN297L transmitter (original remote control), promiscuous mode, `nrf1m`, channel scan with dwell 50 ms | ✅ found on 2423 MHz, 44 frames with valid CRC at −51 … −83 dBm |
 | Native XN297L transmitter, address mode, `nrf1m`, single channel | ✅ continuous reception (~47 frames/s on one hopping channel); 6 … 10 % of the frames fail the CRC with systematic, recurring bit errors |
 | Extra bytes after the frame (up to 150) | ✅ works; used to search for acknowledgements |
+| Raw mode (console tool 1.1.0, any sync word, no decoding) | unit tests and a simulated dongle ✅; **not yet tested on hardware** (first use: [CaDA CJV8011 capture plan](../../CaDA/CJV8011-Capture-Plan.md)) |
 | Promiscuous mode, noise | random 24-bit matches on `71 0F 55` at noise level (≈ −95 … −100 dBm) without valid CRC; weak copies of a strong transmitter also appear on adjacent channels (e.g. 2425 MHz for 2423 MHz) with bit errors |
 
 Test 2026-11-11 (address mode): the captured frames show the Connect telegram

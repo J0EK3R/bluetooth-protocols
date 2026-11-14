@@ -174,6 +174,7 @@ local f = {
     flags        = ProtoField.uint8("xn297l.hdr.flags", "Flags", base.HEX),
     flag_scr     = ProtoField.bool("xn297l.hdr.flags.scrambled", "Scrambler on", 8, nil, 0x01),
     flag_prom    = ProtoField.bool("xn297l.hdr.flags.promiscuous", "Promiscuous capture", 8, nil, 0x02),
+    flag_raw     = ProtoField.bool("xn297l.hdr.flags.raw", "Raw capture (no XN297L decoding)", 8, nil, 0x04),
     channel      = ProtoField.uint8("xn297l.hdr.channel", "RF channel"),
     freq         = ProtoField.uint16("xn297l.hdr.freq", "Frequency (MHz)"),
     rssi         = ProtoField.int8("xn297l.hdr.rssi", "RSSI (dBm)"),
@@ -183,6 +184,8 @@ local f = {
     timestamp    = ProtoField.uint32("xn297l.hdr.timestamp", "Device timestamp (us)"),
 
     raw          = ProtoField.bytes("xn297l.raw", "On-air bytes (as received)"),
+    sync         = ProtoField.bytes("xn297l.sync", "Sync word (raw capture)"),
+    raw_data     = ProtoField.bytes("xn297l.raw_data", "Bytes after the sync word (raw capture)"),
     address_air  = ProtoField.bytes("xn297l.address_air", "Address (on-air, scrambled)"),
     address      = ProtoField.string("xn297l.address", "Address (TX_ADDR order)"),
     payload_len  = ProtoField.uint8("xn297l.payload_len", "Payload length"),
@@ -227,6 +230,7 @@ function proto.dissector(tvb, pinfo, tree)
     local addr_len   = tvb(4, 1):uint()
     local plen_hint  = tvb(5, 1):uint()
     local scrambled  = (flags % 2) == 1
+    local is_raw     = (math.floor(flags / 4) % 2) == 1
 
     local root = tree:add(proto, tvb(), "XN297L")
     local hdr = root:add(tvb(0, HDR_LEN), "Sniffer header")
@@ -234,6 +238,7 @@ function proto.dissector(tvb, pinfo, tree)
     local fl = hdr:add(f.flags, tvb(1, 1))
     fl:add(f.flag_scr, tvb(1, 1))
     fl:add(f.flag_prom, tvb(1, 1))
+    fl:add(f.flag_raw, tvb(1, 1))
     hdr:add(f.channel, tvb(2, 1))
     hdr:add(f.freq, tvb(2, 1), 2400 + channel)
     hdr:add(f.rssi, tvb(3, 1))
@@ -249,6 +254,19 @@ function proto.dissector(tvb, pinfo, tree)
         raw[i + 1] = frame(i, 1):uint()
     end
     root:add(f.raw, frame)
+
+    -- Raw capture (any sync word, unknown transmitter): show the bytes, no decoding
+    if is_raw then
+        pinfo.cols.protocol = "RAW 2.4G"
+        local sync_len = math.min(addr_len, frame:len())
+        root:add(f.sync, frame(0, sync_len))
+        if frame:len() > sync_len then
+            root:add(f.raw_data, frame(sync_len))
+        end
+        pinfo.cols.info = string.format("%d MHz  raw  %s | %s", 2400 + channel,
+            hex(raw, 1, sync_len, " "), hex(raw, sync_len + 1, #raw, " "))
+        return tvb:len()
+    end
 
     if addr_len < 3 or addr_len > 5 or #raw < addr_len + 3 then
         return tvb:len()

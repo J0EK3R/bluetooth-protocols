@@ -24,19 +24,26 @@ Print frames of a known address on 2402 MHz:
 Print everything that starts with the XN297L preamble (experimental):
     python xn297l_sniffer.py --print --port COM5 --mode promiscuous
 
+Raw mode: sync on any 3..5 bytes and print the captured bytes undecoded, e.g.
+the alternating preamble AA AA AA to find an unknown (non-XN297L) transmitter:
+    python xn297l_sniffer.py --print --port COM5 --mode raw --sync AAAAAA \
+        --raw-length 64 --channels 0-83 --dwell 50
+
 Pseudo header in front of every frame (12 bytes, little endian)
 -------------------------------------------------------------
     offset size  field
     0      1     version (= 1)
-    1      1     flags: bit0 = scrambler on, bit1 = promiscuous capture
+    1      1     flags: bit0 = scrambler on, bit1 = promiscuous capture,
+                 bit2 = raw capture (bytes start with the sync word, no XN297L decoding)
     2      1     RF channel (MHz - 2400)
     3      1     RSSI in dBm (signed)
-    4      1     address length (3..5)
+    4      1     address length (3..5); raw capture: sync word length
     5      1     payload length (0 = unknown, find it via CRC)
     6      1     data rate: 0 = nrf1m, 1 = nrf2m, 2 = ble1m
     7      1     reserved (0)
     8      4     device timestamp in microseconds
     12     ...   on-air bytes starting with the first address byte
+                 (raw capture: starting with the sync word)
 """
 
 import argparse
@@ -45,7 +52,7 @@ import struct
 import sys
 import time
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # ---------------------------------------------------------------------------
 # XN297L constants and helpers (see Chips/XN297L.md, section 5)
@@ -57,6 +64,8 @@ LINKTYPE_USER0 = 147                   # pcap link type DLT_USER0
 PSEUDO_HEADER_LEN = 12
 
 RATES = {"nrf1m": 0, "nrf2m": 1, "ble1m": 2}
+
+RAW_LEN_MAX = 250                      # firmware limit for the bytes after the sync word
 
 PYSERIAL_HINT = ("pyserial is not installed for the Python interpreter running this script "
                  "({exe}). Install it with:  \"{exe}\" -m pip install pyserial")
@@ -297,7 +306,14 @@ def configure(dongle: Dongle, args) -> dict:
     # + optional extra bytes, e.g. to see an acknowledgement that follows the frame
     body_len = (payload_len if payload_len > 0 else MAX_PAYLOAD) + 2 + args.extra_bytes
 
-    if args.mode == "address":
+    if args.mode == "raw":
+        sync = parse_sync(args.sync)
+        if not 1 <= args.raw_length <= RAW_LEN_MAX:
+            raise ValueError(f"raw length must be 1..{RAW_LEN_MAX}")
+        addr_len = len(sync)                            # reported as sync word length
+        payload_len = 0
+        capture_len = args.raw_length
+    elif args.mode == "address":
         tx_addr = bytes.fromhex(args.address.replace(":", "").replace(" ", ""))
         if len(tx_addr) not in (3, 4, 5):
             raise ValueError("address must be 3, 4 or 5 bytes")
@@ -318,7 +334,8 @@ def configure(dongle: Dongle, args) -> dict:
     dongle.command("start")
 
     return {
-        "promiscuous": args.mode != "address",
+        "promiscuous": args.mode == "promiscuous",
+        "raw": args.mode == "raw",
         "addr_len": addr_len,
         "payload_len": payload_len,
         "scrambled": scrambled,
@@ -326,8 +343,26 @@ def configure(dongle: Dongle, args) -> dict:
     }
 
 
+def parse_sync(text: str) -> bytes:
+    """Parse a raw sync word (3..5 hex bytes, on-air order, MSB first)."""
+    sync = bytes.fromhex(text.replace(":", "").replace(" ", ""))
+    if len(sync) not in (3, 4, 5):
+        raise ValueError("sync word must be 3, 4 or 5 bytes")
+    return sync
+
+
+def format_raw(data: bytes, sync_len: int) -> str:
+    """Raw capture as hex: sync word | captured bytes."""
+    return f"{data[:sync_len].hex(' ').upper()} | {data[sync_len:].hex(' ').upper()}"
+
+
 def frame_bytes(data: bytes, params: dict) -> bytes:
-    """Strip the preamble in promiscuous mode so the frame starts at the address."""
+    """Strip the preamble in promiscuous mode so the frame starts at the address.
+
+    Raw captures are passed on unchanged (sync word + captured bytes).
+    """
+    if params.get("raw"):
+        return data
     if params["promiscuous"] and data.startswith(PREAMBLE):
         return data[len(PREAMBLE):]
     return data
@@ -352,7 +387,8 @@ def pcap_record(payload: bytes) -> bytes:
 
 def pseudo_header(params: dict, ch: int, rssi: int, t_us: int) -> bytes:
     """Build the 12 byte pseudo header described in the module docstring."""
-    flags = (1 if params["scrambled"] else 0) | (2 if params["promiscuous"] else 0)
+    flags = ((1 if params["scrambled"] else 0) | (2 if params["promiscuous"] else 0)
+             | (4 if params.get("raw") else 0))
     return struct.pack("<BBBbBBBBI", 1, flags, ch, max(-128, min(127, rssi)),
                        params["addr_len"], params["payload_len"], params["rate"],
                        0, t_us & 0xFFFFFFFF)
@@ -394,9 +430,11 @@ def extcap_config() -> None:
 
     print("arg {number=1}{call=--mode}{display=Sync mode}{type=selector}"
           "{tooltip=address: sync on a known address (robust); "
-          "promiscuous: sync on the preamble 71 0F 55 (experimental)}")
+          "promiscuous: sync on the preamble 71 0F 55 (experimental); "
+          "raw: sync on any 3..5 bytes, no XN297L decoding (unknown transmitters)}")
     print("value {arg=1}{value=address}{display=Known address}{default=true}")
     print("value {arg=1}{value=promiscuous}{display=Promiscuous (preamble)}")
+    print("value {arg=1}{value=raw}{display=Raw (any sync word)}")
 
     print("arg {number=2}{call=--address}{display=Address (TX_ADDR order, hex)}"
           "{type=string}{default=C1C2C3C4C5}"
@@ -431,6 +469,15 @@ def extcap_config() -> None:
           "{type=integer}{range=0,200}{default=0}"
           "{tooltip=Capture this many additional bytes (8 us each at 1 Mbps), e.g. to see an "
           "acknowledgement sent right after the frame. Total capture is limited to 250 bytes}")
+
+    print("arg {number=10}{call=--sync}{display=Sync word (raw mode, hex)}"
+          "{type=string}{default=AAAAAA}"
+          "{tooltip=3..5 bytes in on-air order, MSB first; AAAAAA or 555555 = alternating "
+          "preamble of an unknown transmitter; mode 'raw' only}")
+
+    print("arg {number=11}{call=--raw-length}{display=Capture length (raw mode)}"
+          "{type=integer}{range=1,250}{default=64}"
+          "{tooltip=Bytes captured after the sync word; mode 'raw' only}")
 
 
 class ParentWatchdog:
@@ -562,7 +609,10 @@ def run_print(args) -> None:
     dongle = Dongle(args.port)
     try:
         params = configure(dongle, args)
-        print(f"# capturing, mode={args.mode}, channels={args.channels} (Ctrl+C to stop)")
+        extra = (f", sync={args.sync.upper()}, length={args.raw_length}"
+                 if args.mode == "raw" else "")
+        print(f"# capturing, mode={args.mode}{extra}, channels={args.channels}, "
+              f"rate={args.rate} (Ctrl+C to stop)", flush=True)
         while True:
             line = dongle.readline()
             if line is None:
@@ -573,10 +623,13 @@ def run_print(args) -> None:
                     print("#", line)
                 continue
             t_us, ch, rssi, data = pkt
+            head = f"{t_us / 1e6:12.6f}s {2400 + ch} MHz {rssi:4d} dBm"
+            if params["raw"]:
+                print(f"{head}  raw {format_raw(data, params['addr_len'])}", flush=True)
+                continue
             frame = frame_bytes(data, params)
             res = decode_frame(frame, params["addr_len"], params["payload_len"],
                                params["scrambled"])
-            head = f"{t_us / 1e6:12.6f}s {2400 + ch} MHz {rssi:4d} dBm"
             if res is None:
                 if args.show_bad:
                     print(f"{head}  no valid CRC     raw {frame.hex(' ').upper()}")
@@ -611,7 +664,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # sniffer options (shown in Wireshark, usable on the command line)
     p.add_argument("--port", help="serial port of the dongle, e.g. COM5 or /dev/ttyACM0")
-    p.add_argument("--mode", choices=["address", "promiscuous"], default="address")
+    p.add_argument("--mode", choices=["address", "promiscuous", "raw"], default="address")
     p.add_argument("--address", default="C1C2C3C4C5",
                    help="address in TX_ADDR order (hex), used in mode 'address'")
     p.add_argument("--address-length", type=int, choices=[3, 4, 5], default=5,
@@ -625,6 +678,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-scramble", action="store_true", help="transmitter has scrambler off")
     p.add_argument("--extra-bytes", type=int, default=0,
                    help="additional bytes captured after the frame (0..200)")
+    p.add_argument("--sync", default="AAAAAA",
+                   help="sync word for mode 'raw': 3..5 hex bytes, on-air order, MSB first")
+    p.add_argument("--raw-length", type=int, default=64,
+                   help="bytes captured after the sync word in mode 'raw' (1..250)")
 
     # console mode
     p.add_argument("--print", action="store_true", help="print decoded frames to the console")
