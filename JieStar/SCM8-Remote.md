@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.3, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4a, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R2.1: bind phase timing; R2.2: no other bind channel; R2.3: identity fixed over power cycles)
+> Last updated: 2026-11-14 (R2.1 … R2.3: bind phase; R2.4a: 2nd handset H2)
 
 ## Overview
 
@@ -13,7 +13,7 @@
 | Data rate | 1 Mbps (received with the nRF52840 in `Nrf_1Mbit` mode) |
 | Bind channel | **2411 MHz** only, fixed (same as the [MK4.0 handset](../MouldKing/MK4.0-Remote.md)); no bind frames on any other channel 2400 … 2483 MHz (R2.2) |
 | Operating channels | **2416, 2433, 2450, 2469 MHz** (frequency hopping) |
-| Handset identity | 3 bytes (identity byte `E4` + 2-byte ID `22 5B`), **fixed** – unchanged over 9 power-ons (R2.3), see section 3; only one handset measured |
+| Handset identity | 3 bytes: identity byte + 2-byte ID (H1: `E4` + `22 5B`, H2: `80` + `00 63`), **fixed** – unchanged over 9 power-ons (R2.3), see section 3 |
 | Bind telegram | 3 bytes: ID + `00` |
 | Control telegram | 8 bytes: ID + 4 analog channels (one byte each) + 8 momentary buttons (bit mask) + 4 toggle states (bit mask) |
 
@@ -100,17 +100,20 @@ Order and spacing within the 16 ms period are not determined yet.
 
 ## 3. Address and identity
 
-| Item | Value |
-|---|---|
-| Identity byte | `E4` (last byte on air, first byte of `TX_ADDR`), the same in both phases |
-| ID | `22 5B` (first two payload bytes), the same in both phases |
-| Bind address (`TX_ADDR`) | `E4 83 4A 58 34` |
-| Operating address (`TX_ADDR`) | `E4 8C 54 56 90` |
+| Item | H1 | H2 |
+|---|---|---|
+| Identity byte (last byte on air, first byte of `TX_ADDR`) | `E4` | `80` |
+| ID (first two payload bytes) | `22 5B` | `00 63` |
+| Bind address (`TX_ADDR`) | `E4 83 4A 58 34` | `80 83 4A 58 34` |
+| Operating address (`TX_ADDR`) | `E4 8C 54 56 90` | not measured yet |
+
+For H1 the identity byte and the ID are the same in both phases. The bind address prefix
+`83 4A 58 34` (`TX_ADDR` order) is the same for both handsets (R2.4a).
 
 `TX_ADDR` is given in SPI write order (LSByte first), i.e. reversed compared with the on-air order
 in section 2. Calling `E4` + `22 5B` the handset identity is an interpretation by analogy with the
-MK4.0 handset; with only one handset measured, it is not yet known which bytes differ between
-handsets.
+MK4.0 handset; it is confirmed by the 2nd handset H2 (R2.4a), which differs from H1 in exactly
+these bytes and nowhere else in the bind telegram.
 
 **The identity is fixed (R2.3):** in 9 power-ons of the same handset, the bind address
 `E4834A5834` and the bind payload `22 5B 00` were identical every time (2019 frames, all with

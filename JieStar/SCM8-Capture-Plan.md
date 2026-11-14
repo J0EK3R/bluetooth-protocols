@@ -2,7 +2,7 @@
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
 > Status: **in progress** – S1, S2 and S4 answered (bind phase: 2411 MHz only), S3, S5 and S6 partly (handset side of the telegram decoded, identity fixed); open: comparison with the 2nd handset H2 and binding (S5, new runs R2.4, R3.7, R3.8), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
-> Last updated: 2026-11-14 (results R2.1 … R2.3; plan extended for the 2nd handset H2)
+> Last updated: 2026-11-14 (results R2.1 … R2.3, R2.4a; plan extended for the 2nd handset H2)
 
 ## Contents
 
@@ -33,7 +33,7 @@ the same XN297L frame layer.
 | S2 | Frequency / frequencies, data rate | **answered:** bind 2411 MHz, operation 2416 / 2433 / 2450 / 2469 MHz, 1 Mbps (R1.a, R3.1) |
 | S3 | Address (length, on-air bytes), payload length | **partly:** bind `TX_ADDR` `E4834A5834`, operating `TX_ADDR` `E48C545690`, payload 3 / 8 bytes with a 5-byte address (R1.a, R3.1); the address length cannot be decided passively |
 | S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? | **answered:** yes – bind telegrams every 20.08 ms on 2411 MHz until the receiver is switched on, then hopping over four channels (R1.b, R3.1). On 2411 MHz the handset uses **every** 20.083 ms slot (R2.1); no bind frames on any other channel at 1 Mbps (R2.2). |
-| S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? | **partly:** identity is **fixed** – same bind address and payload after 9 power-ons (R2.3); `E4` + `22 5B` appear in both phases. Open: which bytes differ between handsets (R2.4, R3.7 with the 2nd handset H2) and how the receiver binds (R3.8) |
+| S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? | **partly:** identity is **fixed** – same bind address and payload after 9 power-ons (R2.3); `E4` + `22 5B` appear in both phases. H2 differs in exactly these bytes: `80` + `00 63`, the bind address bytes `83 4A 58 34` are common (R2.4a). Open: operating address of H2 (R3.7) and how the receiver binds (R3.8) |
 | S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H | **partly:** handset side decoded – CH1 … CH4 proportional, B6 = 8 momentary buttons, B7 = 4 latching bits (R4.1); physical controls and port reaction open (R4.2) |
 | S7 | Does the handset select a device slot (Device 1 … 3 like the app)? | **open:** no Device 1 … 3 marking on the handset; the round button with the ring symbol is unexplained (R4.2) |
 | S8 | Hopping order and spacing of the four operating channels within the 16.07 ms period | **open** (new question after R4.1; R4.3) |
@@ -84,7 +84,7 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 |---|---|---|---|---|---|
 | 0 BLE check | handset on, receiver off | R0.1, R0.2 | S1 | 10 min | **skipped** – R1.a found XN297L frames, S1 answered |
 | 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
-| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **partly** – R2.1 … R2.3 done, R2.5 answered by R1.b; R2.4a … c (H2) open |
+| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **partly** – R2.1 … R2.3, R2.4a done, R2.4b not needed, R2.5 answered by R1.b; R2.4c open |
 | 3 Handset + receiver | receiver on, binding | R3.1 … R3.8 | S4, S5 | 45 min | **partly** – R3.1 done; R3.4 … R3.8 and the LED table open |
 | 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1 done (handset side); R4.2 … R4.4 open |
 
@@ -239,8 +239,8 @@ Values from R1.a (section 5.1). Handset on, SCM8 receiver **off**, sticks untouc
 | R2.2 | does the handset also send on other channels in the bind phase? | `--mode promiscuous --address-length 5 --payload-length 0 --channels 0-10,12-83 --dwell 50 --rate nrf1m` | Promiscuous, Address length 5, Payload `0`, RF channels `0-10,12-83`, Dwell `50` | 120 s |
 | R2.3 | identity fixed? handset off 5 s / on 5 s, 10× | as R2.1 | as R2.1 | ~2 min |
 | R2.4a | **H2 only** on (H1 off): bind address and ID of H2 | `--mode promiscuous --address-length 5 --payload-length 0 --channels 11 --dwell 0 --rate nrf1m` | Promiscuous, Address length 5, Payload `0`, RF channels `11`, Dwell `0` | 60 s |
-| R2.4b | only if R2.4a finds nothing: H2 bind channel | as R2.2, but with RF channels `0-83` | as R2.2, RF channels `0-83` | 120 s |
-| R2.4c | **H1 and H2** on at the same time: both bind telegrams side by side (time offset, collisions) | as R2.4a | as R2.4a | 60 s |
+| R2.4b | only if R2.4a finds nothing: H2 bind channel – **not needed** (R2.4a found H2 on 2411 MHz) | as R2.2, but with RF channels `0-83` | as R2.2, RF channels `0-83` | 120 s |
+| R2.4c | **H1 and H2** on at the same time: both bind telegrams side by side (time offset, collisions) | `--mode address --address 834A5834 --channels 11 --dwell 0 --payload-length 0 --rate nrf1m` (4-byte common address: both handsets without the losses of the promiscuous mode; the identity byte then is the first payload byte, H1 `27`, H2 `01`) | Known address, Address `834A5834`, RF channels `11`, Dwell `0`, Payload `0` | 60 s |
 | R2.5 | sticks / buttons in the bind phase: does the payload change? | **answered by R1.b** – not needed | – | – |
 
 Expected / interpretation:
@@ -319,6 +319,36 @@ not generated at power-on (H6a of the MK4.0 plan). After power-on the handset st
 immediately on 2411 MHz with the same values. Which of these bytes differ between handsets needs a
 second handset (R2.4).
 
+
+### 6.4 Result R2.4a (2026-11-14) – 2nd handset H2
+
+**Setup:** Promiscuous, address length 5, Payload `0`, RF channels `11`, Dwell `0`, 1 Mbps (nRF).
+**Only H2** on (H1 off), SCM8 receiver off, sticks untouched.
+
+**Measured:**
+
+| Item | H1 (R1.a, R2.1) | H2 (R2.4a) |
+|---|---|---|
+| Frequency | 2411 MHz | 2411 MHz |
+| Address on air (descrambled, MSB first) | `34 58 4A 83 E4` | `34 58 4A 83 80` |
+| `TX_ADDR` (5 B) | `E4834A5834` | `80834A5834` |
+| Payload (5-byte address) | `22 5B 00` | `00 63 00` |
+| Period | 20.083 ms | 20.084 ms (linear fit) |
+| Frames | – | 728 in 25.5 s, 727 with valid CRC; 1 noise hit (other address) |
+| Received slots (promiscuous) | 46 % (R1.a) | 57 % |
+| RSSI | – | −47 … −66 dBm |
+
+**Interpretation:**
+
+- The two handsets differ in exactly the bytes already suspected as identity: the **identity
+  byte** (last address byte on air: `E4` / `80`) and the **2-byte ID** (first payload bytes:
+  `22 5B` / `00 63`). The bytes `34 58 4A 83` (on air) and the trailing payload byte `00` are
+  common – a fixed bind address prefix, as with the MK4.0.
+- A relation between identity byte and ID is not visible with two samples
+  (`22 ^ 5B` = `79`, `00 ^ 63` = `63`).
+- Because the first four address bytes on air are common, the 4-byte address `834A5834` in known
+  address mode receives the bind telegrams of **every** handset without the losses of the
+  promiscuous mode (used for R2.4c and R3.8).
 ---
 
 ## 7. Session 3 – Handset + receiver
@@ -363,9 +393,9 @@ Further runs (receiver bound to the handset unless stated otherwise):
 | R3.5 | receiver response: SCM8 on and bound, switch the **handset** off for 5 s and on again, 10× | `--mode promiscuous --address-length 5 --payload-length 0 --channels 11 --dwell 0 --rate nrf1m` (then the same with `--rate nrf2m` and `--rate ble1m`) | Promiscuous, Address length 5, Payload `0`, RF channels `11`, Dwell `0` | 3 × 2 min |
 | R3.6 | handset vs. app: power the SCM8 with the handset already on and BrickController2 already sending; 5 trials; note which source controls the ports | as R3.4b (shows whether the handset leaves its bind phase) | as R3.4b | 5 × 1 min |
 | R3.7 | **H2** bound to the SCM8 (H1 off): operating channels and operating address of H2; move one stick during the whole run | as R3.1 | as R3.1 | 120 s |
-| R3.8a | H1 and H2 on, SCM8 off → switch the SCM8 on: which handset is bound? 5 trials, alternately H1 / H2 switched on first; note which handset controls the ports | as R2.4a (the bind frames of the bound handset stop, the other one keeps sending) | as R2.4a | 5 × 30 s |
-| R3.8b | SCM8 bound to H1, H2 in the bind phase: switch **H1** off – does the SCM8 take H2 (H2 bind frames stop)? | as R2.4a | as R2.4a | 60 s |
-| R3.8c | SCM8 was last bound to H1; everything off. Switch on **only H2**, then the SCM8: does it bind to H2 (pairing memory)? Then the same with H1 only | as R2.4a | as R2.4a | 2 × 30 s |
+| R3.8a | H1 and H2 on, SCM8 off → switch the SCM8 on: which handset is bound? 5 trials, alternately H1 / H2 switched on first; note which handset controls the ports | as R2.4c (the bind frames of the bound handset stop, the other one keeps sending) | as R2.4c | 5 × 30 s |
+| R3.8b | SCM8 bound to H1, H2 in the bind phase: switch **H1** off – does the SCM8 take H2 (H2 bind frames stop)? | as R2.4c | as R2.4c | 60 s |
+| R3.8c | SCM8 was last bound to H1; everything off. Switch on **only H2**, then the SCM8: does it bind to H2 (pairing memory)? Then the same with H1 only | as R2.4c | as R2.4c | 2 × 30 s |
 
 Interpretation:
 
@@ -380,7 +410,8 @@ Interpretation:
   the SCM8 locks into one mode like the MK4.0.
 - R3.7: compare with H1 (channels 2416 / 2433 / 2450 / 2469 MHz, `E48C545690`): same channels and
   address → only the payload ID separates the handsets; different values → channels and / or
-  address derived from the identity (compare with the bind address of H2 from R2.4a).
+  address derived from the identity (compare with the bind address of H2 from R2.4a). Prediction by analogy with H1: operating
+  address `808C545690`, payload starting with `00 63`.
 - R3.8a: always the handset switched on first → "first come"; always the same → preference /
   memory. R3.8b: H2 bind frames stop → the SCM8 rebinds during operation. R3.8c: H2 stays in the
   bind phase → the SCM8 stores the bound handset.
@@ -466,7 +497,9 @@ same start value (R3.1 started with `0F`) → reset at power-on.
 | R2.1 | 2673 frames / 53.7 s, 2670 CRC ok (3 × 1-bit errors), 100 % of the 20.083 ms slots on 2411 MHz, payload always `22 5B 00` → gaps in R1.a were promiscuous losses (section 6.1) |
 | R2.2 | 210 s over channels 0 … 10, 12 … 83: only 8 noise hits (−96 … −100 dBm, no CRC) → bind phase on 2411 MHz only (section 6.2) |
 | R2.3 | 9 power-ons captured (8 off phases of 4.0 … 7.4 s), 2019 frames, all CRC ok, always `E4834A5834` / `22 5B 00` → identity fixed (section 6.3) |
-| R2.4a … c (H2) | |
+| R2.4a (H2) | 727 frames CRC ok on 2411 MHz: `TX_ADDR` `80834A5834`, payload `00 63 00` → H2 differs from H1 only in identity byte and ID (section 6.4) |
+| R2.4b | not needed |
+| R2.4c | |
 | R3.4a / b | |
 | R3.5 | |
 | R3.6 | |
