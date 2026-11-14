@@ -558,8 +558,8 @@ buttons E … H unchanged. One more unintended B7 bit 2 toggle while stick C was
 | R3.8a … c | |
 | R4.2 | sticks A … D → CH1 … CH4 → ports A … D, E … H → B6 bits → ports E … H, shoulder → B7 bits 0 … 3; with B7 = `0B` / `0F` the handset mixes the sticks; ring button no change |
 | R4.5 | B7 bits 0 … 3 = direction reversal of ports A … D (done in the receiver); stick mixing appears after the ring button with B7 = `00`; 1 missing frame per B7 change |
-| R4.7 | drive mode: C = A, D = B; B7 does not change the values; E … H unchanged; bit 2 toggled again with stick C up |
 | R4.6 | ring button toggles a drive mode: stick A → CH1 = CH2 = A, CH3 = CH4 = `FF` − A, ports A … D run; no flag in the telegram |
+| R4.7 | drive mode: C = A, D = B; B7 does not change the values; E … H unchanged; bit 2 toggled again with stick C up |
 | R4.3 | |
 | R4.4 | |
 
