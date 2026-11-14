@@ -1,7 +1,7 @@
 # CaDA CJV8011 / CJV1010 – Capture plan for the 2.4 GHz radio link
 
 > Purpose: step-by-step measurement guide for the radio link between the [CJV8011](CJV8011.md) handset and the [CJV1010](CJV1010.md) receiver, mainly with the nRF52840 MDK USB dongle ([XN297L sniffer](../Tools/xn297l-sniffer/README.md) in raw mode, [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md)); SDR and logic analyzer as fallbacks.
-> Status: **planned** – no run done yet. Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
+> Status: **in progress** – session 0: R0.3, R0.4 done (no XN297L frames, C2 answered); R0.1, R0.2 (BLE) deferred. Session 1: R1.0 … R1.6 done – **handset found** on 2446 / 2466 MHz, 1 Mbps, repeating 32-byte block after an `AA` preamble (section 6.1); next: session 2 with sync `AA 93 88 B0 CA`. Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
 > Last updated: 2026-11-14 (raw mode of the console tool instead of the separate `raw.py` script)
 
 ## Contents
@@ -33,12 +33,12 @@ the radio layer.
 | # | Question | Status |
 |---|---|---|
 | C1 | Is the handset a BLE device? | open (session 0, expected: no) |
-| C2 | Is it an XN297L-compatible frame (preamble `71 0F 55`) like Mould King / JIESTAR? | open (session 0, expected: no – 12 MHz crystal) |
-| C3 | Frequency / frequencies, data rate, modulation | open (session 1, fallback session 5) |
-| C4 | Preamble, sync word (length, value), frame structure: length field, payload length, trailer, CRC, bit order | open (sessions 1, 2) |
+| C2 | Is it an XN297L-compatible frame (preamble `71 0F 55`) like Mould King / JIESTAR? | **answered: no** – no frame with valid CRC in R0.3 (handset only) and R0.4 (handset + receiver), promiscuous mode, all channels, `nrf1m` (2026-11-14) |
+| C3 | Frequency / frequencies, data rate, modulation | **partly:** 1 Mbps GFSK (received with `nrf1m` and `ble1m`, not with `nrf2m`); handset alone (receiver off) on **2446 and 2466 MHz** (R1.1 … R1.4) |
+| C4 | Preamble, sync word (length, value), frame structure: length field, payload length, trailer, CRC, bit order | **partly:** preamble `AA …` (≥ 4 bytes incl. the nRF preamble), followed by a 32-byte block that repeats without gap (section 6.1); frame boundaries, sync word and CRC open (session 2) |
 | C5 | Pairing: how is the pairing mode entered, is there a bind channel / bind address, does the handset have a fixed ID, is the receiver bound to one handset afterwards? | open (session 3) |
 | C6 | Telegram layout: encoding of the 4 channels × 3 states, effect of the direction switches (handset-side or flag in the telegram) | open (session 4) |
-| C7 | Frequency hopping (channels, order, period) | open (sessions 1, 2) |
+| C7 | Frequency hopping (channels, order, period) | **partly:** only 2446 / 2466 MHz seen with the receiver off; full channel set and order open (R2.1) |
 | C8 | Does the receiver transmit (acknowledge, telemetry)? | open (sessions 2, 3) |
 | C9 | Chip family (LT8900 / LT8910 class or other)? | open (sessions 2, 6) |
 
@@ -118,8 +118,8 @@ Wi-Fi off for the session if possible (or at least keep it in the same state); k
 
 | Session | Device state | Runs | Questions | Time | Status |
 |---|---|---|---|---|---|
-| 0 Exclusions | handset on, receiver off | R0.1 … R0.4 | C1, C2 | 15 min | open |
-| 1 Find | handset on / off, receiver off and on | R1.0 … R1.8 | C3, C4, C7 | 45 min | open |
+| 0 Exclusions | handset on, receiver off | R0.1 … R0.4 | C1, C2 | 15 min | **partly** – R0.3, R0.4 done (no XN297L); R0.1, R0.2 (BLE) deferred, only needed if session 1 finds nothing |
+| 1 Find | handset on / off, receiver off and on | R1.0 … R1.8 | C3, C4, C7 | 45 min | **done** (R1.0 … R1.6) – transmitter found; R1.7, R1.8 replaced by R2.4 |
 | 2 Lock on | handset + receiver | R2.1 … R2.6 | C4, C7, C8, C9 | 45 min | open |
 | 3 Pairing | pairing sequences | R3.1 … R3.5 | C5, C8 | 30 min | open |
 | 4 Mapping | paired, motors on all ports | R4.1 … R4.4 | C6 | 30 min | open |
@@ -190,7 +190,55 @@ If the hits are rare but present on one channel, repeat that setting with `--cha
 
 ---
 
+### 6.1 Results R1.0 … R1.6 (2026-11-14)
+
+Captured with Wireshark (raw mode, `--raw-length 64`, all channels, 50 ms dwell), handset H1 on and
+operated, receiver off; R1.0 with everything off. The runs lasted 20 … 80 s (device time).
+
+| Run | Sync / rate | Frames | Frames of the handset (pattern below) |
+|---|---|---|---|
+| R1.0 | `AAAAAA` / `nrf1m`, everything off | 60 | 0 |
+| R1.1 | `AAAAAA` / `nrf1m` | 62 | **6** (2446 MHz ×2, 2466 MHz ×4, −62 … −69 dBm) |
+| R1.2 | `555555` / `nrf1m` | 29 | **1** (2446 MHz, −61 dBm, shifted by 1 bit) |
+| R1.3 | `AAAAAA` / `ble1m` | 42 | **1** (2466 MHz, −62 dBm) |
+| R1.4 | `555555` / `ble1m` | 51 | **2** (2446 / 2466 MHz, −64 / −76 dBm, shifted by 1 bit) |
+| R1.5 | `AAAAAA` / `nrf2m` | 401 | 0 |
+| R1.6 | `555555` / `nrf2m` | 849 | 0 |
+
+All 10 handset frames are **bit-identical**. After the sync word `AA AA AA` the dongle received
+(64 bytes captured):
+
+```
+93 88 B0 CA D0 19 F2 E6  B5 2B E1 01 83 8E E2 C9  A4 71 7A 73 02 5C 45 16  13 88 B0 CA D0 19 F2 E6
+93 88 B0 CA D0 19 F2 E6  B5 2B E1 01 83 8E E2 C9  A4 71 7A 73 02 5C 45 16  13 88 B0 CA D0 19 F2 E6
+```
+
+- The 32-byte block repeats **without gap** (period exactly 256 bits). The bitstream is not an LFSR
+  sequence (linear complexity 255), i.e. real data, not a test pattern.
+- The 7-byte group `88 B0 CA D0 19 F2 E6` occurs twice per period, preceded by `13` and `93`.
+- The content did not change although the controls were operated – *interpretation:* with the
+  receiver off the handset sends a constant bind / search telegram (like the SCM8 and MK4.0
+  handsets on 2411 MHz).
+- The other frames in R1.1 … R1.4 are noise (also present in R1.0). The many frames with `nrf2m`
+  (R1.5, R1.6) are a wide-band signal on 2431 … 2442 MHz with long `AA` / `55` runs and no
+  recognisable frame structure – probably 2.4 GHz Wi-Fi (channel 6), not the handset (there is no
+  `nrf2m` reference run with everything off).
+
 ## 7. Session 2 – Lock onto the sync word, frame structure
+
+New sync word from session 1: **`AA 93 88 B0 CA`** – two preamble bytes plus the first bytes after
+the preamble, so that only frame starts are captured (the nRF preamble byte in front matches the
+`AA` preamble as well). Runs with `--raw-length 250` show whether the 32-byte block repeats
+over the whole transmission and where it ends.
+
+| Run | State | Settings | Duration |
+|---|---|---|---|
+| R2.1 | handset on, receiver off, controls untouched | `$RAW --sync AA9388B0CA --raw-length 250 --channels 0-83 --dwell 50` | 2 min |
+| R2.2 | same, then each channel plus / minus for 5 s (note the times) | same sync, `--channels 46 --dwell 0` | 1 min |
+| R2.3 | same as R2.2 on 2466 MHz | `--channels 66 --dwell 0` | 1 min |
+| R2.4 | receiver on (paired, motors running), operate all channels | sync as R2.1, `--channels 0-83 --dwell 50`; if nothing is found: R1.1 settings (`AAAAAA`) | 2 min |
+
+The original table below is kept for the later steps of this session.
 
 Prerequisite: candidate sync word and channel(s) from session 1. Use the first 3 … 5 bytes of the
 sync word as nRF sync, a single channel first, then all found channels.
