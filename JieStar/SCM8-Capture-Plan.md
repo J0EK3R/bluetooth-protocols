@@ -2,7 +2,7 @@
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
 > Status: **in progress** – S1, S2 and S4 answered (bind phase: 2411 MHz only), S3, S5 and S6 partly (handset side of the telegram decoded, identity fixed); open: comparison with the 2nd handset H2 and binding (S5, new runs R2.4, R3.7, R3.8), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
-> Last updated: 2026-11-14 (results R2.1 … R2.4c – session 2 done; plan extended for the 2nd handset H2)
+> Last updated: 2026-11-14 (results R2.1 … R2.4c – session 2 done; R4.2; plan extended for H2)
 
 ## Contents
 
@@ -34,8 +34,8 @@ the same XN297L frame layer.
 | S3 | Address (length, on-air bytes), payload length | **partly:** bind `TX_ADDR` `E4834A5834`, operating `TX_ADDR` `E48C545690`, payload 3 / 8 bytes with a 5-byte address (R1.a, R3.1); the address length cannot be decided passively |
 | S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? | **answered:** yes – bind telegrams every 20.08 ms on 2411 MHz until the receiver is switched on, then hopping over four channels (R1.b, R3.1). On 2411 MHz the handset uses **every** 20.083 ms slot (R2.1); no bind frames on any other channel at 1 Mbps (R2.2). |
 | S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? | **partly:** identity is **fixed** – same bind address and payload after 9 power-ons (R2.3); `E4` + `22 5B` appear in both phases. H2 differs in exactly these bytes: `80` + `00 63`, the bind address bytes `83 4A 58 34` are common (R2.4a). Open: operating address of H2 (R3.7) and how the receiver binds (R3.8) |
-| S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H | **partly:** handset side decoded – CH1 … CH4 proportional, B6 = 8 momentary buttons, B7 = 4 latching bits (R4.1); physical controls and port reaction open (R4.2) |
-| S7 | Does the handset select a device slot (Device 1 … 3 like the app)? | **open:** no Device 1 … 3 marking on the handset; the round button with the ring symbol is unexplained (R4.2) |
+| S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H | **mostly answered:** sticks A … D → CH1 … CH4 → ports A … D, buttons E … H → B6 bits → ports E … H, shoulder buttons → B7 bits 0 … 3 (R4.1, R4.2). Open: function of the B7 bits, stick mixing (R4.5) |
+| S7 | Does the handset select a device slot (Device 1 … 3 like the app)? | **open:** no Device 1 … 3 marking on the handset; the round button with the ring symbol changes nothing in the telegram (R4.2) – probably no device slot |
 | S8 | Hopping order and spacing of the four operating channels within the 16.07 ms period | **open** (new question after R4.1; R4.3) |
 
 Writing convention as in the [MK4.0 capture plan](../MouldKing/MK4.0-Capture-Plan.md): only measured
@@ -86,7 +86,7 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 | 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
 | 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **done** – R2.1 … R2.3, R2.4a, R2.4c done, R2.4b not needed, R2.5 answered by R1.b |
 | 3 Handset + receiver | receiver on, binding | R3.1 … R3.8 | S4, S5 | 45 min | **partly** – R3.1 done; R3.4 … R3.8 and the LED table open |
-| 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1 done (handset side); R4.2 … R4.4 open |
+| 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1, R4.2 done; R4.3 … R4.5 open |
 
 All runs now have their exact settings. Sessions 0 and 1 are kept for reference and for other
 handsets.
@@ -491,8 +491,16 @@ on channel a take the next frame on channel b; the delay histogram peaks at the 
 relative to a within the 16.07 ms period. Sorting the offsets gives the order: one frame every
 ~4 ms rotating over the channels, or a burst over all four channels per period.
 
+| R4.5 | function of the B7 bits / stick mixing: start with B7 = `00` if possible (toggle the set bits off); then set **one** shoulder button at a time, move stick A up and B left in each state, note which ports react; finally press the ring button and repeat | as R4.1 | ~5 min |
+
 **R4.4:** B7 unchanged after power-on → the latching states are stored in the handset; always the
-same start value (R3.1 started with `0F`) → reset at power-on.
+same start value → reset at power-on. Start values seen so far: `0F` (R3.1), `04` (R4.1), `01` (R4.2).
+
+**Result R4.2 (2026-11-14):** 6380 frames with valid CRC in 102.6 s on 2416 MHz (99.9 % of the
+slots). Every control drives the port with its own letter; full table, stick mixing with B7 =
+`0B` / `0F` and the missing frame at each B7 toggle in
+[SCM8-Remote.md §5.3](SCM8-Remote.md#53-mapping-controls--bytes--ports-r42). Ring button: no
+change in the telegram.
 
 ---
 
@@ -532,7 +540,8 @@ same start value (R3.1 started with `0F`) → reset at power-on.
 | R3.6 | |
 | R3.7 (H2) | |
 | R3.8a … c | |
-| R4.2 | |
+| R4.2 | sticks A … D → CH1 … CH4 → ports A … D, E … H → B6 bits → ports E … H, shoulder → B7 bits 0 … 3; with B7 = `0B` / `0F` the handset mixes the sticks; ring button no change |
+| R4.5 | |
 | R4.3 | |
 | R4.4 | |
 

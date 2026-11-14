@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4a, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R2.1 … R2.3: bind phase; R2.4a: 2nd handset H2)
+> Last updated: 2026-11-14 (R4.2: mapping controls → bytes → ports, stick mixing)
 
 ## Overview
 
@@ -44,9 +44,10 @@ Controls printed on the handset:
 | Shoulder buttons | 2 left, 2 right (markings not readable on the photo) | 4 buttons |
 | Centre | power button, round button with ring symbol, status LED | – |
 
-Interpretation (to be confirmed, section 5): the telegram fields match the controls one to one –
-4 axes → CH1 … CH4 (ports A … D), 8 buttons E / F / G / H → 8 bits of B6 (ports E … H, two
-directions each), 4 shoulder buttons → 4 latching bits of B7.
+**Confirmed by R4.2** (section 5.3): the telegram fields match the controls one to one – 4 axes
+A … D → CH1 … CH4 → ports A … D, 8 buttons E / F / G / H → 8 bits of B6 → ports E … H (two
+directions each), 4 shoulder buttons → 4 latching bits of B7. The marking of each control is the
+port it drives.
 
 ---
 
@@ -150,19 +151,18 @@ while sticks and buttons were moved (R1.b).
 |---|---|---|---|
 | 0 | `ID0` | `22` | handset ID, byte 0 |
 | 1 | `ID1` | `5B` | handset ID, byte 1 |
-| 2 | CH1 | `00` … `80` … `FF` | analog stick axis |
-| 3 | CH2 | `00` … `80` … `FF` | analog stick axis |
-| 4 | CH3 | `00` … `80` … `FF` | analog stick axis |
-| 5 | CH4 | `00` … `80` … `FF` | analog stick axis |
-| 6 | B6 | `00`; one bit set while a button is held: `01`, `02`, `04`, `08`, `10`, `20`, `40`, `80` | 8 momentary buttons, one bit each |
+| 2 | CH1 | `00` … `80` … `FF` | stick **A** (up = `FF`) → port A |
+| 3 | CH2 | `00` … `80` … `FF` | stick **B** (left = `FF`) → port B |
+| 4 | CH3 | `00` … `80` … `FF` | stick **C** (up = `FF`) → port C |
+| 5 | CH4 | `00` … `80` … `FF` | stick **D** (left = `FF`) → port D |
+| 6 | B6 | `00`; one bit set while a button is held: `01`, `02`, `04`, `08`, `10`, `20`, `40`, `80` | 8 momentary buttons → ports E … H, see section 5.3 |
 | 7 | B7 | `03`, `04`, `05`, `06`, `07`, `0B`, `0F` | 4 latching states (bits 0 … 3), see section 5.2 |
 
 - **Neutral** = `0x80` for CH1 … CH4. Neutral control telegram: `22 5B 80 80 80 80 00 04`
   (with B7 = `04`).
 - Analog channels use the full byte (`00` … `FF`), like the MK4.0 handset and unlike the app
   telegram with one nibble per channel.
-- Which physical control belongs to which byte / bit, and which ports A … H react, is not
-  documented yet (section 9).
+- Mapping of controls, bytes and ports: section 5.3 (R4.2).
 
 ### 5.1 Stick channels (R4.1)
 
@@ -200,9 +200,57 @@ reaction not recorded):
 | 134.1 | `06` | `0110` | bit 0 cleared |
 | 137.7 | `04` | `0100` | bit 1 cleared |
 
-Every change flips **exactly one bit**. Interpretation: four independent on/off states (latching
+In R4.1 every change flipped **exactly one bit**; in R4.2 one change flipped two bits (`01` → `04`,
+section 5.3). Interpretation: four independent on/off states (latching
 switches, or buttons that toggle a state in the handset). Their function (e.g. direction reversal,
 speed limit, port group E … H) is unknown.
+
+### 5.3 Mapping controls → bytes → ports (R4.2)
+
+Procedure: each control held for ~3 s, ~3 s neutral in between, in a fixed order; a motor on each
+port. Result as reported: **every control drives the port with its own letter**.
+
+| Control | Byte / bit | Value while held | Port |
+|---|---|---|---|
+| Stick A up / down | CH1 | `FF` / `00` | A |
+| Stick B left / right | CH2 | `FF` / `00` | B |
+| Stick C up / down | CH3 | `FF` / `00` | C |
+| Stick D left / right | CH4 | `FF` / `00` | D |
+| E, button 1 / 2 | B6 bit 0 / bit 1 | `01` / `02` | E |
+| F, button 1 / 2 | B6 bit 3 / bit 2 | `08` / `04` | F |
+| G, button 1 / 2 | B6 bit 4 / bit 5 | `10` / `20` | G |
+| H, button 1 / 2 | B6 bit 7 / bit 6 | `80` / `40` | H |
+| Shoulder buttons 1 … 4 (left outer → right outer) | B7 bit 0 … 3 (toggle) | `04` → `05` → `07` → `03` → `0B` | – (see below) |
+| Round button with ring symbol | – | **no change** of address or payload, no missing frame | – |
+
+(Button 1 / 2 = the order in which the two buttons of a group were pressed. Interpretation: the
+two buttons of a group are the two directions of the port.)
+
+**Stick mixing.** After the four shoulder buttons (B7 = `0B`, later `0F`) the sticks were moved
+again. The handset then no longer sent single axes but coupled values – only four patterns
+occurred, each twice:
+
+| Pattern CH1 CH2 CH3 CH4 | Interpretation (differential drive, left motors A / B, right motors C / D mounted mirrored) |
+|---|---|
+| `FF FF 00 00` | forward |
+| `00 00 FF FF` | backward |
+| `00 00 00 00` | turn one way |
+| `FF FF FF FF` | turn the other way |
+
+Measured: with B7 = `04` (start of R4.2, and R4.1) each stick axis changed only its own byte; with
+B7 = `0B` / `0F` one movement changed all four bytes. Which B7 bit (or the ring button) switches the
+mixing on, and which ports react in this mode, is not yet known (section 9). The mixing is done in
+the handset; the receiver only gets the mixed values.
+
+**B7 details:**
+
+- At the start of R4.2 B7 was `01` (R3.1: `0F`, R4.1: `04`).
+- Two changes happened while a stick was held and no shoulder button was intended: `01` → `04`
+  (two bits at once) at t = 16.7 s while stick C was up, `0B` → `0F` at t = 74.5 s.
+- At **each** of the 6 B7 changes exactly one frame on 2416 MHz is missing (no frame with bad CRC
+  either). Elsewhere in the 102 s only 3 frames were missing, each received with a bit error.
+  Interpretation: in the slot of a toggle the handset sends something else (other channel, address
+  or length) or nothing.
 
 ---
 
@@ -259,11 +307,12 @@ There are two ways to capture the operation phase:
 
 Planned captures: [SCM8-Capture-Plan.md](SCM8-Capture-Plan.md).
 
-- **Mapping:** which physical stick axis / button / switch belongs to CH1 … CH4, the 8 bits of B6
-  and the 4 bits of B7, and which ports A … H react? How are 8 ports controlled with 4 analog channels?
-- **B7:** function of the four latching bits; is the state kept over a power cycle of the handset
-  (R3.1 started with `0F`)?
-- **Identity:** which bytes differ between handsets; fixed or generated at power-on?
+- **B7:** function of each of the four latching bits; which one switches the stick mixing on
+  (section 5.3); why did B7 change twice without an intended shoulder button press; is the state
+  kept over a power cycle of the handset (start values `0F`, `04`, `01` seen)?
+- **Missing frame at a B7 toggle:** what does the handset send in that slot?
+- **Ring button:** no visible effect on the telegram – function unknown.
+- **Identity:** how the identity byte and the 2-byte ID are related (only 2 handsets measured).
 - **Address length:** 3, 4 or 5 bytes (not decidable passively).
 - **Hopping:** order of the four channels within the 16.07 ms period.
 - **Receiver response** that ends the bind phase (not captured).
