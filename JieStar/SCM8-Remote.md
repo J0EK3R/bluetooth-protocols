@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1, R2.3, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R2.1: bind phase timing in address mode)
+> Last updated: 2026-11-14 (R2.1: bind phase timing; R2.3: identity fixed over power cycles)
 
 ## Overview
 
@@ -13,7 +13,7 @@
 | Data rate | 1 Mbps (received with the nRF52840 in `Nrf_1Mbit` mode) |
 | Bind channel | **2411 MHz**, fixed (same as the [MK4.0 handset](../MouldKing/MK4.0-Remote.md)) |
 | Operating channels | **2416, 2433, 2450, 2469 MHz** (frequency hopping) |
-| Handset identity | 3 bytes (identity byte `E4` + 2-byte ID `22 5B`), see section 3 – only one handset measured |
+| Handset identity | 3 bytes (identity byte `E4` + 2-byte ID `22 5B`), **fixed** – unchanged over 9 power-ons (R2.3), see section 3; only one handset measured |
 | Bind telegram | 3 bytes: ID + `00` |
 | Control telegram | 8 bytes: ID + 4 analog channels (one byte each) + 8 momentary buttons (bit mask) + 4 toggle states (bit mask) |
 
@@ -112,6 +112,11 @@ in section 2. Calling `E4` + `22 5B` the handset identity is an interpretation b
 MK4.0 handset; with only one handset measured, it is not yet known which bytes differ between
 handsets.
 
+**The identity is fixed (R2.3):** in 9 power-ons of the same handset, the bind address
+`E4834A5834` and the bind payload `22 5B 00` were identical every time (2019 frames, all with
+valid CRC). The values are therefore stored in the handset (or derived from a fixed chip ID), not
+generated at power-on (interpretation).
+
 **Address length is not certain** (same situation as the MK4.0): the CRC covers address and payload
 together, so 3-, 4- and 5-byte addresses all give a valid CRC. This document uses a 5-byte address.
 
@@ -133,7 +138,7 @@ together, so 3-, 4- and 5-byte addresses all give a valid CRC. This document use
 | 1 | `ID1` = `5B` | handset ID, byte 1 |
 | 2 | `0x00` | constant |
 
-The bind telegram was identical in all 3024 frames with valid CRC of R1.a, R1.b, R2.1 and R3.1, including
+The bind telegram was identical in all 5043 frames with valid CRC of R1.a, R1.b, R2.1, R2.3 and R3.1, including
 while sticks and buttons were moved (R1.b).
 
 ## 5. Control telegram (8 bytes)
