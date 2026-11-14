@@ -2,7 +2,7 @@
 
 > Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2, R4.5 … R4.7 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R4.7: drive mode with all sticks, buttons and B7 states)
+> Last updated: 2026-11-14 (names from the operating instructions: series mode, A/B switching buttons)
 
 ## Overview
 
@@ -41,8 +41,10 @@ Controls printed on the handset:
 | Right stick | **C** (up / down), **D** (left / right) | 2 axes |
 | Left button group | **E**, **F** (two buttons each) | 4 buttons |
 | Right button group | **G**, **H** (two buttons each) | 4 buttons |
-| Shoulder buttons | 2 left, 2 right (markings not readable on the photo) | 4 buttons |
-| Centre | power button, round button with ring symbol, status LED | – |
+| Shoulder buttons | 2 left, 2 right; *A/B Switching Forward/Reverse Button* in the operating instructions | 4 buttons |
+| Centre | power button (*ON/OFF*), round button with ring symbol (*series* key), status LED | – |
+
+Names in *italics*: [operating instructions](SCM8-Manual.md#22-handset-remote-control). Power: 2 × AAA.
 
 **Confirmed by R4.2** (section 5.3): the telegram fields match the controls one to one – 4 axes
 A … D → CH1 … CH4 → ports A … D, 8 buttons E / F / G / H → 8 bits of B6 → ports E … H (two
@@ -228,7 +230,10 @@ port. Result as reported: **every control drives the port with its own letter**.
 (Button 1 / 2 = the order in which the two buttons of a group were pressed. Interpretation: the
 two buttons of a group are the two directions of the port.)
 
-**Drive mode (ring button, R4.6).** The round button with the ring symbol toggles a mode in which
+**Drive mode = series mode (ring button, R4.6).** The operating instructions call this button the
+*series* key: held for 1 s it switches the series mode on / off, the ports A … D are then driven
+together and E … H are disabled ([SCM8-Manual.md §3.1](SCM8-Manual.md#31-handset)). The round
+button with the ring symbol toggles a mode in which
 the handset mixes the sticks. The mode is not transmitted as a flag – the handset only sends the
 mixed values. B7 stays unchanged (R4.6: `00`) and, unlike a B7 toggle, no frame is missing.
 
@@ -266,7 +271,9 @@ R4.7 (drive mode on, sticks A … D up / down and buttons E … H in each of the
 - The B7 state does not change the values sent (same patterns in all five B7 states) – the
   direction reversal is applied in the receiver in drive mode too. Which ports react per B7 state
   was not recorded.
-- The buttons E … H are not affected by the drive mode.
+- The buttons E … H are not affected by the drive mode: the handset still sends their B6 bits,
+  although the operating instructions say E … H are disabled in series mode – presumably the
+  receiver ignores them (port reaction not recorded, capture plan R4.8).
 
 
 Interpretation: a **differential (tank) drive mode** for a vehicle with two motors on each side
@@ -350,8 +357,10 @@ Planned captures: [SCM8-Capture-Plan.md](SCM8-Capture-Plan.md).
   without an intended shoulder button press in R4.2; is the state kept over a power cycle of the
   handset (start values `0F`, `04`, `01` seen)?
 - **Missing frame at a B7 toggle:** what does the handset send in that slot?
-- **Drive mode (ring button):** mixing rule for A and B moved together (limiting at `00` / `FF`);
-  is the mode kept over a power cycle?
+- **Series mode (ring button):** mixing rule for A and B moved together (limiting at `00` / `FF`);
+  is the mode kept over a power cycle; are E … H ignored by the receiver?
+- **Direction reversal of E … H:** according to the operating instructions by holding two of the
+  keys for 1 s – how does it appear in the telegram (B7 has only 4 bits)?
 - **Unintended bit 2 toggles** while stick C is pushed up (3 times): is there a stick button?
 - **Identity:** how the identity byte and the 2-byte ID are related (only 2 handsets measured).
 - **Address length:** 3, 4 or 5 bytes (not decidable passively).

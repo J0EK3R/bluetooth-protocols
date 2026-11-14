@@ -1,7 +1,7 @@
 # JIESTAR SCM8 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/JieStar/JieStarSCM8.cs`, `JieStarBase.cs`, `JieStar.cs`, `JieStarDeviceManager.cs`, `Protocols/JieStarProtocol.cs`, `Protocols/CryptTools.cs`, the platform `JieStarPlatformService.cs` files, `UI/Controls/Devices/JieStarSCM8ChannelSelectorView.xaml` and `JieStarSCM8DatagramTests.cs`.
-> Last updated: 2026-11-13 (receiver photos, link to handset protocol)
+> Last updated: 2026-11-14 (operating instructions: device slot, indicator, charging)
 
 <img src="img/jiestarscm8_image.png" alt="JIESTAR SCM8 module" height="180">
 
@@ -11,7 +11,7 @@
 
 | Property | Value |
 |---|---|
-| Device | JIESTAR SCM8 – 8-channel *Smart Creative Module* |
+| Device | JIESTAR SCM8 – 8-channel *Smart Creative Module*, "J101" in the [operating instructions](SCM8-Manual.md) |
 | Transport | **BLE advertising** (broadcast), no GATT connection |
 | Direction | app → receiver only (no back channel, no battery voltage) |
 | Manufacturer ID | `0xFFF0` (same as Mould King) |
@@ -379,9 +379,9 @@ Own photos of the receiver module (straightened, background removed; no board an
 | Item | Observation |
 |---|---|
 | Outputs | 8 sockets **A … H**: lower row `A`, `C`, `E`, `G`, upper row `B`, `D`, `F`, `H` (the upper labels are printed upside down); `G` and `H` sit turned by 90° at the right end |
-| Power | USB-C socket marked `5V ⎓ 2A` (built-in battery is likely, **not verified**) |
-| Controls | one square push button next to the USB-C socket |
-| Other | two small holes on the connector side (one next to the USB-C socket, one between the pin-hole rows) – status LED and/or microphone, **not verified** |
+| Power | USB-C socket marked `5V ⎓ 2A`; built-in battery, charging time about 4 h ([operating instructions](SCM8-Manual.md#34-charging-receiver)) |
+| Controls | one square push button next to the USB-C socket: power on / off (hold 1 s) and module 1 … 3 selection (hold 1 s again, [operating instructions](SCM8-Manual.md#6-app-operation)) |
+| Other | two small holes on the connector side: the one between the pin-hole rows is the indicator light, the one next to the USB-C socket the charging indicator (according to the [operating instructions](SCM8-Manual.md#21-receiver-smart-creative-module)) |
 | Mechanics | Technic pin holes on the connector side and on the short side, stud-tube pattern on the back side |
 
 Port names on the receiver match the markings on the original handset ([SCM8-Remote.md](SCM8-Remote.md#handset)):
@@ -392,7 +392,7 @@ sticks A … D, buttons E … H.
 ## 9. Open questions
 
 - Meaning of the constant bytes `00 00 00 00` in the Connect telegram.
-- How the device slot is selected on the receiver.
+- ~~How the device slot is selected on the receiver~~ – according to the [operating instructions](SCM8-Manual.md#6-app-operation): hold the power button for 1 s to step from module 1 to 2 to 3 (indicator flashes rapidly); not verified with the app protocol.
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
 - Interaction with an [SCM4](SCM4.md) or [PowerBox](../PowerBox/A-Series.md) receiver in range: the Connect identifiers `A4 … 5B` are shared.
 - Hardware details: radio chip and board (case not opened, section 8).
