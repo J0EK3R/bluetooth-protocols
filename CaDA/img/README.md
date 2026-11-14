@@ -18,23 +18,23 @@ Images used by the documents in [../](../README.md). Credits: see "Image credits
 
 ## Product photos (JPEG)
 
-Product photos from [klemmshop.de](https://www.klemmshop.de), scaled down from 800 × 800 to 400 × 400 px; the CJV1010 photos are PNG with the background removed and cropped.
+Product photos from [klemmshop.de](https://www.klemmshop.de), scaled down from 800 × 800 to 400 × 400 px, converted to PNG with the background removed and cropped.
 
 | File | Content | Used in |
 |---|---|---|
 | `cjv1010_receiver_top.png` | CJV1010 receiver, top view with the four colour-marked ports | [CJV1010.md](../CJV1010.md), [main README](../../README.md) |
 | `cjv1010_receiver_side.png` | CJV1010 receiver, side view (variant with dark grey bottom) | [CJV1010.md](../CJV1010.md) |
-| `cjv8011_remote_front.jpg` | CJV8011 handset, front | [CJV8011.md](../CJV8011.md), [main README](../../README.md) |
-| `cjv8011_remote_top.jpg` | CJV8011 handset, top edge with shoulder buttons and slide switches | [CJV8011.md](../CJV8011.md) |
-| `cjv8011_remote_back.jpg` | CJV8011 handset, back with battery compartment (2 × AA) and "2.4GHz" sticker | [CJV8011.md](../CJV8011.md) |
-| `cjv8011_remote_wheel_front.jpg` | CJV8011 steering-wheel variant, front | [CJV8011.md](../CJV8011.md) |
-| `cjv8011_remote_wheel_perspective.jpg` | CJV8011 steering-wheel variant, perspective | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_remote_front.png` | CJV8011 handset, front | [CJV8011.md](../CJV8011.md), [main README](../../README.md) |
+| `cjv8011_remote_top.png` | CJV8011 handset, top edge with shoulder buttons and slide switches | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_remote_back.png` | CJV8011 handset, back with battery compartment (2 × AA) and "2.4GHz" sticker | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_remote_wheel_front.png` | CJV8011 steering-wheel variant, front | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_remote_wheel_perspective.png` | CJV8011 steering-wheel variant, perspective | [CJV8011.md](../CJV8011.md) |
 
 ## Own photos (PNG / JPEG)
 
 Own photos of the repository author (cropped, scaled down, metadata removed). Photos of
 free-standing objects are PNG with the background removed (transparent); close-ups are JPEG,
-except `cjv1010_board_power.png` (close-up at the board edge, background removed).
+except `cjv1010_board_power.png` and `cjv8011_board_main.png` (background removed).
 
 | File | Content | Used in |
 |---|---|---|
@@ -49,6 +49,6 @@ except `cjv1010_board_power.png` (close-up at the board edge, background removed
 | `cjv1010_battery.png` | built-in battery pack Li-ion 14500 / 500 mAh / 7.4 V | [CJV1010.md](../CJV1010.md) |
 | `cjv8011_housing_front.png` | CJV8011 handset, front (rotated 180° to the normal orientation) | [CJV8011.md](../CJV8011.md) |
 | `cjv8011_housing_top_edge.png` | CJV8011 handset, top edge with shoulder buttons and slide switches | [CJV8011.md](../CJV8011.md) |
-| `cjv8011_board_main.jpg` | CJV8011 opened, green main board and switch board | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_board_main.png` | CJV8011 opened, green main board and switch board | [CJV8011.md](../CJV8011.md) |
 | `cjv8011_board_switches.png` | CJV8011 switch board `SY-JV8011T-2.4G` | [CJV8011.md](../CJV8011.md) |
 | `cjv8011_chip_sop16.jpg` | close-up of the unmarked SOP-16 on the CJV8011 main board | [CJV8011.md](../CJV8011.md) |
