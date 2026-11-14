@@ -45,3 +45,10 @@ Own photos of the repository author (cropped, scaled down, metadata removed).
 | `cjv1010_chip_mx616.jpg` | close-up of the SOP-16 motor driver `MX616` | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_chip_dpak.jpg` | close-up of the DPAK MOSFET `xMD40P03` | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_battery.jpg` | built-in battery pack Li-ion 14500 / 500 mAh / 7.4 V | [CJV1010.md](../CJV1010.md) |
+| `cjv8011_housing_front.jpg` | CJV8011 handset, front (rotated 180° to the normal orientation) | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_housing_perspective.jpg` | CJV8011 handset, perspective | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_housing_top_edge.jpg` | CJV8011 handset, top edge with shoulder buttons and slide switches | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_housing_top_edge_2.jpg` | CJV8011 handset, top edge, second view | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_board_main.jpg` | CJV8011 opened, green main board and switch board | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_board_switches.jpg` | CJV8011 switch board `SY-JV8011T-2.4G` | [CJV8011.md](../CJV8011.md) |
+| `cjv8011_chip_sop16.jpg` | close-up of the unmarked SOP-16 on the CJV8011 main board | [CJV8011.md](../CJV8011.md) |
