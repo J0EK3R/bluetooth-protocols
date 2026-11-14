@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Capture plan for the original handset
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
-> Status: **in progress** – S1, S2 and S4 answered, S3 and S6 partly (handset side of the telegram decoded); open: identity (S5), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
-> Last updated: 2026-11-13 (status of all questions and sessions updated, new runs R3.4 … R3.5 and R4.2 … R4.4)
+> Status: **in progress** – S1, S2 and S4 answered (bind part on 2411 MHz complete except R2.2), S3 and S6 partly (handset side of the telegram decoded); open: identity (S5), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
+> Last updated: 2026-11-14 (result R2.1)
 
 ## Contents
 
@@ -32,7 +32,7 @@ the same XN297L frame layer.
 | S1 | Does the handset transmit BLE (advertising) or a proprietary 2.4 GHz frame? | **answered:** proprietary – native XN297L frames found directly on 2411 MHz (R1.a); session 0 skipped |
 | S2 | Frequency / frequencies, data rate | **answered:** bind 2411 MHz, operation 2416 / 2433 / 2450 / 2469 MHz, 1 Mbps (R1.a, R3.1) |
 | S3 | Address (length, on-air bytes), payload length | **partly:** bind `TX_ADDR` `E4834A5834`, operating `TX_ADDR` `E48C545690`, payload 3 / 8 bytes with a 5-byte address (R1.a, R3.1); the address length cannot be decided passively |
-| S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? | **answered:** yes – bind telegrams every 20.08 ms on 2411 MHz until the receiver is switched on, then hopping over four channels (R1.b, R3.1). Still open: does the bind phase also use other channels (R2.2)? |
+| S4 | Is there a bind phase (fixed bind channel / address) and an operation phase (hopping)? | **answered:** yes – bind telegrams every 20.08 ms on 2411 MHz until the receiver is switched on, then hopping over four channels (R1.b, R3.1). On 2411 MHz the handset uses **every** 20.083 ms slot (R2.1). Still open: does the bind phase also use other channels (R2.2)? |
 | S5 | Handset identity: fixed or generated at power-on; how does the receiver bind? | **open:** only one handset measured; `E4` + `22 5B` appear in both phases (R2.3, R2.4) |
 | S6 | Telegram layout: which byte / nibble is which control, mapping to ports A … H | **partly:** handset side decoded – CH1 … CH4 proportional, B6 = 8 momentary buttons, B7 = 4 latching bits (R4.1); physical controls and port reaction open (R4.2) |
 | S7 | Does the handset select a device slot (Device 1 … 3 like the app)? | **open:** no Device 1 … 3 marking on the handset; the round button with the ring symbol is unexplained (R4.2) |
@@ -83,7 +83,7 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 |---|---|---|---|---|---|
 | 0 BLE check | handset on, receiver off | R0.1, R0.2 | S1 | 10 min | **skipped** – R1.a found XN297L frames, S1 answered |
 | 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
-| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **open** – R2.5 already answered by R1.b |
+| 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **partly** – R2.1 done, R2.5 answered by R1.b; R2.2, R2.3 (R2.4) open |
 | 3 Handset + receiver | receiver on, binding | R3.1 … R3.6 | S4, S5 | 30 min | **partly** – R3.1 done; R3.4 … R3.6 and the LED table open |
 | 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1 done (handset side); R4.2 … R4.4 open |
 
@@ -199,8 +199,8 @@ about 150 extra bytes. Handset switched on, SCM8 receiver **off**, sticks untouc
   valid CRC. With a 3-byte address the payload is 5 bytes like the MK4.0 bind telegram.
 - The ~54 % missing slots are either reception losses of the promiscuous mode, or the handset
   sends on other channels in between (e.g. alternating every 10 ms) – R2.1 / R2.2 check this.
-  In operation, address mode received 99.8 % of the slots (R4.1), which points to losses of the
-  promiscuous mode.
+  **Answered by R2.1:** address mode received 100 % of the slots – the gaps were reception losses
+  of the promiscuous mode.
 - `22 5B` (or `27 22 5B`, `C1 27 22 5B`) is a candidate for the handset identity; R2.3 / R2.4 check it.
   **Confirmed in R3.1:** the identity byte `E4` and `22 5B` also appear in the operating frames.
 
@@ -253,6 +253,27 @@ Expected / interpretation:
   moved: the bind telegram carries no control values (as MK4.0).
 
 Questions answered: S3, S4 (bind part), S5.
+
+### 6.1 Result R2.1 (2026-11-14)
+
+**Setup:** as in the table (Wireshark, Known address `E4834A5834`, RF channels `11`, Dwell `0`,
+Payload `0`, 1 Mbps (nRF)). Handset on, SCM8 receiver off, sticks untouched. Exported as JSON.
+
+**Measured:**
+
+| Item | Value |
+|---|---|
+| Frames | 2673 in 53.66 s (device time), **2670 with valid CRC** |
+| Content | only the bind frame: address `E4834A5834`, payload `22 5B 00` (3 bytes) in all 2670 frames |
+| Bad frames | 3 – each a single bit error in the scrambled payload (byte 3 on air `A6` → `86` / `26` / `86`), RSSI −58 / −59 dBm; each sits in the slot where the valid frame is missing |
+| Period | **20.083 ms** (linear fit over all slots; std. dev. of the single gaps 61 µs) |
+| Received slots | 2673 of 2673 (100 %), 2670 of 2673 with valid CRC (99.9 %); no gap longer than one slot |
+| RSSI | −54 … −72 dBm, mean −58 dBm |
+
+**Interpretation:** the handset transmits the bind telegram in **every** 20.083 ms slot on 2411 MHz.
+The 46 % in R1.a were losses of the promiscuous mode. So there is no room for an alternating
+second bind channel at the same rate – R2.2 can still show transmissions on other channels
+*between* the 2411 MHz frames.
 
 ---
 
@@ -387,7 +408,7 @@ same start value (R3.1 started with `0F`) → reset at power-on.
 
 | Run | Result |
 |---|---|
-| R2.1 | |
+| R2.1 | 2673 frames / 53.7 s, 2670 CRC ok (3 × 1-bit errors), 100 % of the 20.083 ms slots on 2411 MHz, payload always `22 5B 00` → gaps in R1.a were promiscuous losses (section 6.1) |
 | R2.2 | |
 | R2.3 | |
 | R2.4 | |

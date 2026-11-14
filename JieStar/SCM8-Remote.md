@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 (runs R1.a, R1.b, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-13 (explanation of the sniffer RF channels)
+> Last updated: 2026-11-14 (R2.1: bind phase timing in address mode)
 
 ## Overview
 
@@ -56,7 +56,7 @@ directions each), 4 shoulder buttons → 4 latching bits of B7.
 Handset switched on (no bound receiver)
         │
         ▼
- Bind phase: Bind telegram on 2411 MHz, bind address     ← every 20.08 ms
+ Bind phase: Bind telegram on 2411 MHz, bind address     ← every 20.083 ms
         │
         │   SCM8 switched on → bind frames stop
         ▼
@@ -64,7 +64,7 @@ Handset switched on (no bound receiver)
             hopping over 2416 / 2433 / 2450 / 2469 MHz
 ```
 
-- Without a receiver, the handset stays in the bind phase (observed for 10.7 s in R1.a).
+- Without a receiver, the handset stays in the bind phase (observed for 53.7 s without a gap in R2.1).
 - In R3.1 the last bind frame was received at t = 8.422 s and the first control frame at
   t = 8.651 s: the switch to operation happened within these 230 ms.
 - After the switch, nothing more was received on 2411 MHz (R1.b).
@@ -89,7 +89,7 @@ Handset switched on (no bound receiver)
 
 | Phase | Observation |
 |---|---|
-| Bind | fixed **20.08 ms** grid on 2411 MHz (std. dev. 85 µs); in promiscuous mode only ~46 % of the slots were received |
+| Bind | fixed **20.083 ms** grid on 2411 MHz (R2.1, address mode, 53.7 s: 2673 of 2673 slots received, 2670 with valid CRC, std. dev. 61 µs); in promiscuous mode (R1.a) only ~46 % of the slots were received – reception losses of the promiscuous mode, not gaps of the handset |
 | Operation | on 2416 MHz alone (R4.1, address mode, 152 s): one frame every **16.07 ms** (std. dev. 65 µs), 62 frames/s, 99.8 % of the slots received |
 
 Interpretation: the handset transmits on **each** of the four channels every 16.07 ms – either a
@@ -133,7 +133,7 @@ together, so 3-, 4- and 5-byte addresses all give a valid CRC. This document use
 | 1 | `ID1` = `5B` | handset ID, byte 1 |
 | 2 | `0x00` | constant |
 
-The bind telegram was identical in all 354 frames with valid CRC of R1.a, R1.b and R3.1, including
+The bind telegram was identical in all 3024 frames with valid CRC of R1.a, R1.b, R2.1 and R3.1, including
 while sticks and buttons were moved (R1.b).
 
 ## 5. Control telegram (8 bytes)
@@ -221,7 +221,7 @@ the bind frame matches 2 of 2, the neutral control frame with B7 = `04` matches 
 | Operating address (`TX_ADDR`) | `<id> 8C 54 56 90` | `<id> 6C DB 6E 0E` | `C1 C2 C3 C4 C5` |
 | Bind telegram | 3 bytes (ID + `00`) | 5 bytes (ID + `00 00 00`) | Connect, 8 bytes |
 | Control telegram | 8 bytes: ID + 4 × byte + 2 bytes | 8 bytes: ID + 6 × byte | Command, 8 bytes: 8 nibbles per device |
-| Bind period | 20.08 ms | ~14 ms | – |
+| Bind period | 20.083 ms | ~14 ms | – |
 
 ## 8. Capturing with the XN297L sniffer
 
