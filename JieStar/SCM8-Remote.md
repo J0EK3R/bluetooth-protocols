@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1, R2.3, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), one SCM8 handset and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.3, R3.1, R4.1 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R2.1: bind phase timing; R2.3: identity fixed over power cycles)
+> Last updated: 2026-11-14 (R2.1: bind phase timing; R2.2: no other bind channel; R2.3: identity fixed over power cycles)
 
 ## Overview
 
@@ -11,7 +11,7 @@
 | Device | original 2.4 GHz handset of the JIESTAR SCM8 receiver ([SCM8](SCM8.md)) |
 | Radio | XN297L-compatible frame: preamble `71 0F 55`, scrambler on, CRC-16, normal mode (no PCF) |
 | Data rate | 1 Mbps (received with the nRF52840 in `Nrf_1Mbit` mode) |
-| Bind channel | **2411 MHz**, fixed (same as the [MK4.0 handset](../MouldKing/MK4.0-Remote.md)) |
+| Bind channel | **2411 MHz** only, fixed (same as the [MK4.0 handset](../MouldKing/MK4.0-Remote.md)); no bind frames on any other channel 2400 … 2483 MHz (R2.2) |
 | Operating channels | **2416, 2433, 2450, 2469 MHz** (frequency hopping) |
 | Handset identity | 3 bytes (identity byte `E4` + 2-byte ID `22 5B`), **fixed** – unchanged over 9 power-ons (R2.3), see section 3; only one handset measured |
 | Bind telegram | 3 bytes: ID + `00` |
