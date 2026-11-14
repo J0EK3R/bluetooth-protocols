@@ -61,7 +61,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 |---|---|---|---|---|
 | <img src="CaDA/img/cada_racecar_image.png" alt="" height="48"> | [CaDA/RaceCar.md](CaDA/RaceCar.md) | RaceCar (Rev1 and Rev2) | throttle, steering (byte), front/rear lights | Rev1: CaDA encryption + XN297L frame (address "CAR") on BLE channel 38; Rev2: plain manufacturer data; pairing via app identifier |
 | <img src="CaDA/img/cjv1010_receiver_top.png" alt="" height="48"> | [CaDA/CJV1010.md](CaDA/CJV1010.md) | CJV1010 4-channel 2.4 GHz receiver / battery box | 4 ports (1 red, 2 blue, 3 black, 4 yellow), three states each: neutral / plus / minus | original 2.4 GHz handset CJV8011 only, pairing mode; protocol not yet captured |
-| <img src="CaDA/img/cjv8011_remote_front.png" alt="" height="48"> | [CaDA/CJV8011.md](CaDA/CJV8011.md) | CJV8011 original 4-channel 2.4 GHz handset | 4 channels (2 levers + 2 pairs of shoulder buttons), three states each, direction-reversal switch per channel; steering-wheel variant | for the CJV1010, pairing mode; protocol not yet captured |
+| <img src="CaDA/img/cjv8011_remote_front.png" alt="" height="48"> | [CaDA/CJV8011.md](CaDA/CJV8011.md) | CJV8011 original 4-channel 2.4 GHz handset | 4 channels (2 levers + 2 pairs of shoulder buttons), three states each, direction-reversal switch per channel; steering-wheel variant | for the CJV1010, pairing mode; protocol not yet captured, [capture plan](CaDA/CJV8011-Capture-Plan.md) |
 
 ### Chips
 
@@ -85,6 +85,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 │   ├── RaceCar.md
 │   ├── CJV1010.md
 │   ├── CJV8011.md
+│   ├── CJV8011-Capture-Plan.md
 │   └── img/
 ├── Chips/
 │   └── XN297L.md
