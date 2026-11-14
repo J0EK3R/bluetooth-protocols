@@ -60,7 +60,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 | Image | Document | Device | Channels | Notes |
 |---|---|---|---|---|
 | <img src="CaDA/img/cada_racecar_image.png" alt="" height="48"> | [CaDA/RaceCar.md](CaDA/RaceCar.md) | RaceCar (Rev1 and Rev2) | throttle, steering (byte), front/rear lights | Rev1: CaDA encryption + XN297L frame (address "CAR") on BLE channel 38; Rev2: plain manufacturer data; pairing via app identifier |
-| <img src="CaDA/img/cjv1010_receiver_top.jpg" alt="" height="48"> | [CaDA/CJV1010.md](CaDA/CJV1010.md) | CJV1010 4-channel 2.4 GHz receiver / battery box | 4 ports (1 red, 2 blue, 3 black, 4 yellow), three states each: neutral / plus / minus | original 2.4 GHz handset CJV8011 only, pairing mode; protocol not yet captured |
+| <img src="CaDA/img/cjv1010_receiver_top.png" alt="" height="48"> | [CaDA/CJV1010.md](CaDA/CJV1010.md) | CJV1010 4-channel 2.4 GHz receiver / battery box | 4 ports (1 red, 2 blue, 3 black, 4 yellow), three states each: neutral / plus / minus | original 2.4 GHz handset CJV8011 only, pairing mode; protocol not yet captured |
 | <img src="CaDA/img/cjv8011_remote_front.jpg" alt="" height="48"> | [CaDA/CJV8011.md](CaDA/CJV8011.md) | CJV8011 original 4-channel 2.4 GHz handset | 4 channels (2 levers + 2 pairs of shoulder buttons), three states each, direction-reversal switch per channel; steering-wheel variant | for the CJV1010, pairing mode; protocol not yet captured |
 
 ### Chips
@@ -130,4 +130,4 @@ The set images in `MouldKing/img/mkh4_set_*.png` are product photos from the Mou
 
 The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` and the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg`, and the CaDA CJV1010 / CJV8011 photos `CaDA/img/cjv1010_{housing,board,chip}_*`, `CaDA/img/cjv1010_battery.png` and `CaDA/img/cjv8011_{housing,board,chip}_*` are own photos of the repository author (cropped, scaled down, metadata removed; free-standing objects with the background removed).
 
-The product photos `CaDA/img/cjv1010_receiver_*.jpg` and `CaDA/img/cjv8011_remote_*.jpg` are taken from the klemmshop.de product pages ([CJV1010](https://www.klemmshop.de/CaDA-CJV1010-Klemmbaustein-4-Kanal-Empfaenger-/-Akkubox-24-GHz), [CJV8011](https://www.klemmshop.de/CaDA-CJV8011-Klemmbaustein-4-Kanal-Fernsteuerung-24-GHz_2?lang=eng)), © CaDA / klemmshop.de, scaled down to 400 × 400 px.
+The product photos `CaDA/img/cjv1010_receiver_*.png` and `CaDA/img/cjv8011_remote_*.jpg` are taken from the klemmshop.de product pages ([CJV1010](https://www.klemmshop.de/CaDA-CJV1010-Klemmbaustein-4-Kanal-Empfaenger-/-Akkubox-24-GHz), [CJV8011](https://www.klemmshop.de/CaDA-CJV8011-Klemmbaustein-4-Kanal-Fernsteuerung-24-GHz_2?lang=eng)), © CaDA / klemmshop.de, scaled down to 400 × 400 px (CJV1010 photos: background removed and cropped).

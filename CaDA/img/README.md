@@ -18,12 +18,12 @@ Images used by the documents in [../](../README.md). Credits: see "Image credits
 
 ## Product photos (JPEG)
 
-Product photos from [klemmshop.de](https://www.klemmshop.de), scaled down from 800 × 800 to 400 × 400 px.
+Product photos from [klemmshop.de](https://www.klemmshop.de), scaled down from 800 × 800 to 400 × 400 px; the CJV1010 photos are PNG with the background removed and cropped.
 
 | File | Content | Used in |
 |---|---|---|
-| `cjv1010_receiver_top.jpg` | CJV1010 receiver, top view with the four colour-marked ports | [CJV1010.md](../CJV1010.md), [main README](../../README.md) |
-| `cjv1010_receiver_side.jpg` | CJV1010 receiver, side view (variant with dark grey bottom) | [CJV1010.md](../CJV1010.md) |
+| `cjv1010_receiver_top.png` | CJV1010 receiver, top view with the four colour-marked ports | [CJV1010.md](../CJV1010.md), [main README](../../README.md) |
+| `cjv1010_receiver_side.png` | CJV1010 receiver, side view (variant with dark grey bottom) | [CJV1010.md](../CJV1010.md) |
 | `cjv8011_remote_front.jpg` | CJV8011 handset, front | [CJV8011.md](../CJV8011.md), [main README](../../README.md) |
 | `cjv8011_remote_top.jpg` | CJV8011 handset, top edge with shoulder buttons and slide switches | [CJV8011.md](../CJV8011.md) |
 | `cjv8011_remote_back.jpg` | CJV8011 handset, back with battery compartment (2 × AA) and "2.4GHz" sticker | [CJV8011.md](../CJV8011.md) |
@@ -33,7 +33,8 @@ Product photos from [klemmshop.de](https://www.klemmshop.de), scaled down from 8
 ## Own photos (PNG / JPEG)
 
 Own photos of the repository author (cropped, scaled down, metadata removed). Photos of
-free-standing objects are PNG with the background removed (transparent); close-ups are JPEG.
+free-standing objects are PNG with the background removed (transparent); close-ups are JPEG,
+except `cjv1010_board_power.png` (close-up at the board edge, background removed).
 
 | File | Content | Used in |
 |---|---|---|
@@ -42,7 +43,7 @@ free-standing objects are PNG with the background removed (transparent); close-u
 | `cjv1010_board_front.png` | CJV1010 receiver board, front | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_board_back.png` | CJV1010 receiver board `SY-JV1010R-2-2.4G`, back | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_board_rf.jpg` | close-up of the RF section (SOP-16, 12 MHz crystal, antenna) | [CJV1010.md](../CJV1010.md) |
-| `cjv1010_board_power.jpg` | close-up of the power section (battery connector, charger, MOSFETs) | [CJV1010.md](../CJV1010.md) |
+| `cjv1010_board_power.png` | close-up of the power section (battery connector, charger, MOSFETs) | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_chip_mx616.jpg` | close-up of the SOP-16 motor driver `MX616` | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_chip_dpak.jpg` | close-up of the DPAK MOSFET `xMD40P03` | [CJV1010.md](../CJV1010.md) |
 | `cjv1010_battery.png` | built-in battery pack Li-ion 14500 / 500 mAh / 7.4 V | [CJV1010.md](../CJV1010.md) |
