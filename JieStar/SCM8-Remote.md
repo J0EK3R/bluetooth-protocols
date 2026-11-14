@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2, R4.5, R4.6 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2, R4.5 … R4.7 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R4.2, R4.5, R4.6: mapping controls → bytes → ports, direction reversal, drive mode of the ring button)
+> Last updated: 2026-11-14 (R4.7: drive mode with all sticks, buttons and B7 states)
 
 ## Overview
 
@@ -248,6 +248,27 @@ after it the same movement gave
 - In R4.2 / R4.5 stick B in this mode gave equal values on all four channels (e.g. `53 53 53 53`,
   `00 00 00 00`, `FF FF FF FF`).
 
+R4.7 (drive mode on, sticks A … D up / down and buttons E … H in each of the B7 states `00`, `01`,
+`03`, `07`, `0B`; 8825 frames with valid CRC in 142 s):
+
+| Movement in drive mode | CH1 CH2 CH3 CH4 (end position) |
+|---|---|
+| stick A up / down | `FF FF 00 00` / `00 00 FF FF` |
+| stick B (first / second direction) | `00 00 00 00` / `FF FF FF FF` |
+| stick C up / down | `FF FF 00 00` / `00 00 FF FF` – **same as A** |
+| stick D (first / second direction) | `00 00 00 00` / `FF FF FF FF` – **same as B** |
+| buttons E … H | B6 bits as in normal mode (`01`, `02`, `08`, `04`, `10`, `20`, `80`, `40`), sticks `80` |
+
+- Every one of the 8825 frames had either CH1 = CH2 = CH3 = CH4, or CH1 = CH2 and
+  CH3 = CH4 = `FF` − CH1 – one stick axis at a time was moved, so the mixing of two axes at once is
+  still not measured.
+- In drive mode both sticks do the same: C acts like A, D like B.
+- The B7 state does not change the values sent (same patterns in all five B7 states) – the
+  direction reversal is applied in the receiver in drive mode too. Which ports react per B7 state
+  was not recorded.
+- The buttons E … H are not affected by the drive mode.
+
+
 Interpretation: a **differential (tank) drive mode** for a vehicle with two motors on each side
 (A / B one side, C / D the other side, mounted mirrored): stick A drives forward / backward (C / D
 get the inverted value so that the mirrored motors turn the same way), stick B turns on the spot
@@ -258,9 +279,12 @@ mode, have not been measured.
 
 - At the start of R4.2 B7 was `01` (R3.1: `0F`, R4.1: `04`).
 - Two changes happened while a stick was held and no shoulder button was intended: `01` → `04`
-  (two bits at once) at t = 16.7 s while stick C was up, `0B` → `0F` at t = 74.5 s.
+  (two bits at once) at t = 16.7 s while stick C was up, `0B` → `0F` at t = 74.5 s. A third one in
+  R4.7: `07` → `03` (bit 2 cleared) at t = 105.4 s while stick C was up. Interpretation (to be
+  checked): pushing the right stick (C) hard presses a hidden stick button, or the right inner
+  shoulder button, which toggles bit 2.
 - At **each** B7 change exactly one frame on 2416 MHz is missing (no frame with bad CRC either):
-  6 of 6 in R4.2, 8 of 8 in R4.5. Elsewhere only 3 frames per run were missing, each received with
+  6 of 6 in R4.2, 8 of 8 in R4.5, 5 of 5 in R4.7. Elsewhere only 3 frames per run were missing, each received with
   a bit error.
 - In R4.5 (start value `00`) every change flipped exactly one bit: `00` → `01` → `00` → `02` →
   `00` → `04` → `00` → `08` → `00`.
@@ -327,7 +351,8 @@ Planned captures: [SCM8-Capture-Plan.md](SCM8-Capture-Plan.md).
   handset (start values `0F`, `04`, `01` seen)?
 - **Missing frame at a B7 toggle:** what does the handset send in that slot?
 - **Drive mode (ring button):** mixing rule for A and B moved together (limiting at `00` / `FF`);
-  do sticks C / D still act in this mode; is the mode kept over a power cycle?
+  is the mode kept over a power cycle?
+- **Unintended bit 2 toggles** while stick C is pushed up (3 times): is there a stick button?
 - **Identity:** how the identity byte and the 2-byte ID are related (only 2 handsets measured).
 - **Address length:** 3, 4 or 5 bytes (not decidable passively).
 - **Hopping:** order of the four channels within the 16.07 ms period.

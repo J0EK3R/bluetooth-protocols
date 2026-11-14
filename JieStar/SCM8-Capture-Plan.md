@@ -2,7 +2,7 @@
 
 > Purpose: step-by-step measurement guide for the original 2.4 GHz handset of the [JIESTAR SCM8](SCM8.md) with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) and the [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md) (both on the nRF52840 MDK USB dongle).
 > Status: **in progress** – S1, S2 and S4 answered (bind phase: 2411 MHz only), S3, S5 and S6 partly (handset side of the telegram decoded, identity fixed); open: comparison with the 2nd handset H2 and binding (S5, new runs R2.4, R3.7, R3.8), port mapping (S6), device slot (S7), hopping order (S8), receiver response. Results in [SCM8-Remote.md](SCM8-Remote.md). Status per question: section 1, per session: section 3.
-> Last updated: 2026-11-14 (results R2.1 … R2.4c – session 2 done; R4.2, R4.5, R4.6; plan extended for H2)
+> Last updated: 2026-11-14 (results R2.1 … R2.4c – session 2 done; R4.2, R4.5 … R4.7; plan extended for H2)
 
 ## Contents
 
@@ -86,7 +86,7 @@ at least keep it in the same state); keep each run below 70 minutes (device time
 | 1 Discovery | handset on, receiver off; then off | R1.0 … R1.4, R1.a, R1.b | S1, S2, S3 | 30 min | **done** – R1.a / R1.b directly on 2411 MHz; the full scan R1.1 … R1.4 and R1.0 were not needed |
 | 2 Lock on | handset on, receiver off | R2.1 … R2.5 | S3, S4, S5 | 30 min | **done** – R2.1 … R2.3, R2.4a, R2.4c done, R2.4b not needed, R2.5 answered by R1.b |
 | 3 Handset + receiver | receiver on, binding | R3.1 … R3.8 | S4, S5 | 45 min | **partly** – R3.1 done; R3.4 … R3.8 and the LED table open |
-| 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1, R4.2, R4.5, R4.6 done; R4.3, R4.4 open |
+| 4 Mapping | receiver bound | R4.1 … R4.4 | S6, S7, S8 | 30 min | **partly** – R4.1, R4.2, R4.5 … R4.7 done; R4.3, R4.4 open |
 
 All runs now have their exact settings. Sessions 0 and 1 are kept for reference and for other
 handsets.
@@ -493,6 +493,7 @@ relative to a within the 16.07 ms period. Sorting the offsets gives the order: o
 
 | R4.5 | function of the B7 bits / stick mixing: start with B7 = `00` if possible (toggle the set bits off); then set **one** shoulder button at a time, move stick A up and B left in each state, note which ports react; finally press the ring button and repeat | as R4.1 | ~5 min |
 | R4.6 | ring button / stick mixing: sticks neutral, press the ring button; move each stick axis (A up / down, B left / right, C, D) for 3 s each and note the ports; press the ring button again and repeat | as R4.1 | ~3 min |
+| R4.7 | drive mode on: sticks A … D up / down, buttons E … H, repeated in several B7 states | as R4.1 | ~2.5 min |
 
 **R4.4:** B7 unchanged after power-on → the latching states are stored in the handset; always the
 same start value → reset at power-on. Start values seen so far: `0F` (R3.1), `04` (R4.1), `01` (R4.2).
@@ -512,6 +513,10 @@ frame at every B7 change (8 of 8).
 **Result R4.6 (2026-11-14):** 2107 frames, all with valid CRC, 33.8 s, no missing frame. Stick A
 only: before the ring button CH1 alone; after it CH1 = CH2 = A and CH3 = CH4 = `FF` − A; reported:
 all ports A … D run. See [SCM8-Remote.md §5.3](SCM8-Remote.md#53-mapping-controls--bytes--ports-r42).
+
+**Result R4.7 (2026-11-14):** 8825 frames with valid CRC in 142 s. In drive mode stick C gives the
+same values as A and D the same as B; B7 (`00`, `01`, `03`, `07`, `0B`) does not change the values;
+buttons E … H unchanged. One more unintended B7 bit 2 toggle while stick C was up (3rd time).
 
 ---
 
@@ -553,6 +558,7 @@ all ports A … D run. See [SCM8-Remote.md §5.3](SCM8-Remote.md#53-mapping-cont
 | R3.8a … c | |
 | R4.2 | sticks A … D → CH1 … CH4 → ports A … D, E … H → B6 bits → ports E … H, shoulder → B7 bits 0 … 3; with B7 = `0B` / `0F` the handset mixes the sticks; ring button no change |
 | R4.5 | B7 bits 0 … 3 = direction reversal of ports A … D (done in the receiver); stick mixing appears after the ring button with B7 = `00`; 1 missing frame per B7 change |
+| R4.7 | drive mode: C = A, D = B; B7 does not change the values; E … H unchanged; bit 2 toggled again with stick C up |
 | R4.6 | ring button toggles a drive mode: stick A → CH1 = CH2 = A, CH3 = CH4 = `FF` − A, ports A … D run; no flag in the telegram |
 | R4.3 | |
 | R4.4 | |
