@@ -1,8 +1,8 @@
 # JIESTAR SCM8 – Original 2.4 GHz Remote Control
 
-> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2, R4.5 of the [capture plan](SCM8-Capture-Plan.md)).
+> Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), two SCM8 handsets (H1, H2) and one SCM8 receiver, 2026-11-13 … 14 (runs R1.a, R1.b, R2.1 … R2.4c, R3.1, R4.1, R4.2, R4.5, R4.6 of the [capture plan](SCM8-Capture-Plan.md)).
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-14 (R4.2, R4.5: mapping controls → bytes → ports, direction reversal, stick mixing)
+> Last updated: 2026-11-14 (R4.2, R4.5, R4.6: mapping controls → bytes → ports, direction reversal, drive mode of the ring button)
 
 ## Overview
 
@@ -223,30 +223,36 @@ port. Result as reported: **every control drives the port with its own letter**.
 | G, button 1 / 2 | B6 bit 4 / bit 5 | `10` / `20` | G |
 | H, button 1 / 2 | B6 bit 7 / bit 6 | `80` / `40` | H |
 | Shoulder buttons 1 … 4 (left outer → right outer) | B7 bit 0 … 3 (toggle) | `04` → `05` → `07` → `03` → `0B` | reverse the direction of ports A … D (R4.5) |
-| Round button with ring symbol | – | **no flag** in the telegram, no missing frame; switches the stick mixing (below, to be confirmed) | – |
+| Round button with ring symbol | – | **no flag** in the telegram, no missing frame; toggles the drive mode (stick mixing, below) | – |
 
 (Button 1 / 2 = the order in which the two buttons of a group were pressed. Interpretation: the
 two buttons of a group are the two directions of the port.)
 
-**Stick mixing.** After the four shoulder buttons (B7 = `0B`, later `0F`) the sticks were moved
-again. The handset then no longer sent single axes but coupled values – only four patterns
-occurred, each twice:
+**Drive mode (ring button, R4.6).** The round button with the ring symbol toggles a mode in which
+the handset mixes the sticks. The mode is not transmitted as a flag – the handset only sends the
+mixed values. B7 stays unchanged (R4.6: `00`) and, unlike a B7 toggle, no frame is missing.
 
-| Pattern CH1 CH2 CH3 CH4 | Interpretation (differential drive, left motors A / B, right motors C / D mounted mirrored) |
-|---|---|
-| `FF FF 00 00` | forward |
-| `00 00 FF FF` | backward |
-| `00 00 00 00` | turn one way |
-| `FF FF FF FF` | turn the other way |
+R4.6 (stick A only, up and down): before the ring button stick A changed only CH1 (`80` … `B6`);
+after it the same movement gave
 
-Measured: in R4.2 the mixing appeared after the shoulder buttons **and** the ring button had been
-pressed (B7 = `0B` / `0F`). In R4.5 it appeared with **B7 = `00`**, after a pause of 13 s in which
-the ring button was pressed (step 4 of the procedure) – before that, with the same B7 values, every
-axis changed only its own byte. So the B7 bits do **not** switch the mixing; the ring button does
-(interpretation, a dedicated run is pending). The handset does not transmit the mode – it only
-sends the mixed values. In R4.5 the mixed values were proportional, e.g. `96 96 69 69`,
-`C7 C7 38 38`, `53 53 53 53`, ending at `FF FF 00 00` and `00 00 00 00`. Which ports react in this
-mode is not documented yet.
+| Stick A | CH1 | CH2 | CH3 | CH4 |
+|---|---|---|---|---|
+| neutral | `80` | `80` | `80` | `80` |
+| part way up | `B6` | `B6` | `49` | `49` |
+| full up | `FF` | `FF` | `00` | `00` |
+| full down | `00` | `00` | `FF` | `FF` |
+
+- CH1 = CH2 = A, CH3 = CH4 = `FF` − A exactly (e.g. `96` / `69`, `C7` / `38`), proportional over
+  the whole range.
+- Reported: **all four ports A … D** run with stick A.
+- In R4.2 / R4.5 stick B in this mode gave equal values on all four channels (e.g. `53 53 53 53`,
+  `00 00 00 00`, `FF FF FF FF`).
+
+Interpretation: a **differential (tank) drive mode** for a vehicle with two motors on each side
+(A / B one side, C / D the other side, mounted mirrored): stick A drives forward / backward (C / D
+get the inverted value so that the mirrored motors turn the same way), stick B turns on the spot
+(all four channels the same). Values for A and B together, and whether C / D take part in this
+mode, have not been measured.
 
 **B7 details:**
 
@@ -320,8 +326,8 @@ Planned captures: [SCM8-Capture-Plan.md](SCM8-Capture-Plan.md).
   without an intended shoulder button press in R4.2; is the state kept over a power cycle of the
   handset (start values `0F`, `04`, `01` seen)?
 - **Missing frame at a B7 toggle:** what does the handset send in that slot?
-- **Ring button / stick mixing:** confirm that the ring button switches the mixing; which ports
-  react in mixing mode; which stick is mixed.
+- **Drive mode (ring button):** mixing rule for A and B moved together (limiting at `00` / `FF`);
+  do sticks C / D still act in this mode; is the mode kept over a power cycle?
 - **Identity:** how the identity byte and the 2-byte ID are related (only 2 handsets measured).
 - **Address length:** 3, 4 or 5 bytes (not decidable passively).
 - **Hopping:** order of the four channels within the 16.07 ms period.
