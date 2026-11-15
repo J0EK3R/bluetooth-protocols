@@ -58,7 +58,7 @@ marked as such.
 | phone with BrickController2 (SCM8 device configured) | sanity check R1.0 (not run), R3.6 |
 | PC with Wireshark (extcap) or Python 3 + `pyserial` for `--print` | all sessions |
 
-Flashing: double-click the dongle button (LED green, UF2 drive appears), copy the `.uf2` of the
+Flashing: with the dongle plugged in, press its button once (LED green, UF2 drive appears), copy the `.uf2` of the
 firmware the session needs.
 
 Console command (run from the repository root, replace `<PORT>`, e.g. `COM5`):

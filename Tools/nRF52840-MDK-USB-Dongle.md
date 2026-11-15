@@ -26,7 +26,7 @@ proprietary 2.4 GHz frames (XN297L, raw mode for unknown chips).
 | I/O | up to 12 GPIOs on two 10-pin header rows (not populated) |
 | Power | from USB, 3.3 V regulator (1 A peak); label: DC 5 V, 500 mA |
 | Size | 42 × 18 × 4 mm without headers |
-| Bootloader | UF2 bootloader: double-click the button (newer bootloaders: hold the button while plugging in) → drive `UF2BOOT` appears, copy a `.uf2` file onto it |
+| Bootloader | UF2 bootloader: with the dongle plugged in, **press the button once** → LED green, drive `UF2BOOT` appears, copy a `.uf2` file onto it (bootloader 0.2.13) |
 
 ## Use in this repository
 

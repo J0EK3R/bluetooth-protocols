@@ -89,7 +89,7 @@ Wireshark extcap `xn297l_sniffer.py` (1.1.0) exposes this as **raw mode** (`--mo
 | *optional:* SDR covering 2.4 GHz (HackRF One, ADALM-Pluto, …) + [Universal Radio Hacker](https://github.com/jopohl/urh) or inspectrum | session 5 |
 | *optional:* logic analyzer (≥ 8 channels, ≥ 24 MS/s) + PulseView / sigrok, fine probes | session 6 |
 
-Flashing: double-click the dongle button (LED green, UF2 drive appears), copy the `.uf2` of the
+Flashing: with the dongle plugged in, press its button once (LED green, UF2 drive appears), copy the `.uf2` of the
 firmware the session needs.
 
 **Console command** (run from the repository root, replace `<PORT>`, e.g. `COM5`; stop with

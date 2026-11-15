@@ -36,10 +36,8 @@ swapped at any time by drag and drop.
 
 ## 2. Restoring the firmware
 
-1. With the dongle plugged in, press the button **twice quickly**. The RGB LED turns green and the
-   drive **UF2BOOT** appears. (Tested with UF2 bootloader 0.2.13; according to the makerdiary
-   documentation, newer bootloaders enter this mode by holding the button while plugging the
-   dongle in.)
+1. With the dongle plugged in, press the button **once**. The RGB LED turns green and the drive
+   **UF2BOOT** appears (tested with UF2 bootloader 0.2.13).
 2. Copy `firmware/nrf_sniffer_ble_4.1.1_nrf52840_mdk_usb_dongle.uf2` onto the drive.
 3. The dongle restarts as nRF Sniffer (serial port).
 

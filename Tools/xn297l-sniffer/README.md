@@ -95,10 +95,8 @@ use it as `--sync` to receive the frames reliably. Example: the
 
 The dongle ships with a UF2 bootloader; no programmer is needed.
 
-1. With the dongle plugged in, press the button **twice quickly**. The RGB LED turns green
-   and a drive **UF2BOOT** appears. (Tested with UF2 bootloader 0.2.13; according to the
-   makerdiary documentation, newer bootloaders enter this mode by holding the button while
-   plugging the dongle in.)
+1. With the dongle plugged in, press the button **once**. The RGB LED turns green and a drive
+   **UF2BOOT** appears (tested with UF2 bootloader 0.2.13).
 2. Copy `firmware/prebuilt/xn297l_sniffer_nrf52840_mdk_usb_dongle.uf2` (or your own
    `build/zephyr/zephyr.uf2`) onto the drive.
 3. The dongle restarts and appears as a serial port (**XN297L Sniffer**, Windows: `COMx`,
