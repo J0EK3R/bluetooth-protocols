@@ -177,7 +177,7 @@ Neutral Command telegram for Device 1: `61 <AppId0> <AppId1> 80 80 80 80 80 80 9
   - An already connected receiver does not react to further Connect telegrams with a different AppId.
   - If one Connect telegram reaches several searching receivers, all of them bind to that AppId.
   - pink0D uses the last two bytes of the ESP32 Bluetooth MAC address as AppId in Connect and Command telegrams.
-- This is not real pairing (no handshake, presumably not kept over a power cycle).
+- This is not real pairing (no handshake). On the MK4.0 the binding is lost on power off (own test, see [MK4.0 §4](MK4.0.md#4-app-identifier)); the same is expected for the MK6.0 but not verified.
 - The same behaviour was **verified by own test for the MK4.0** (2026-11-15, [MK4.0 section 4](MK4.0.md#4-app-identifier)); for the MK6.0 it is still to be verified.
 - If confirmed, several phones can control several MK6.0 receivers independently in range, even with the same device slot. BrickController2 uses a random AppId per installation.
 ---

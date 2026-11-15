@@ -87,7 +87,7 @@ The device slot (Device 1, 2 or 3) of an MK4.0 receiver is selected with the **p
 | 6 | `0x4F` | constant (meaning unknown) |
 | 7 | `0x52` | telegram identifier (end) |
 
-**Purpose:** selects Bluetooth mode (app control) on a freshly powered-on receiver that has not yet received any telegrams. It does not pair the receiver with the app. Once a mode is selected, it only changes after a power cycle (see section 1).
+**Purpose:** selects Bluetooth mode (app control) on a freshly powered-on receiver that has not yet received any telegrams. It also latches the AppId of this telegram (section 4); this binding is lost on power off. Once a mode is selected, it only changes after a power cycle (see section 1).
 
 The Connect telegram is identical to that of the [MK5.0](MK5.0.md#2-connect-telegram-8-bytes-raw). The MK5.0 also uses the same Command identifiers `7D` / `82` (see [MK5.0 §9](MK5.0.md#9-open-questions)).
 
@@ -163,7 +163,7 @@ Neutral Command telegram: `7D <AppId0> <AppId1> 88 88 88 88 88 88 82`.
   - An already connected receiver does not react to further Connect telegrams with a different AppId.
   - If one Connect telegram reaches several receivers that are all searching after power-on, **all of them** bind to that AppId.
   - pink0D uses the last two bytes of the ESP32 Bluetooth MAC address as AppId in Connect and Command telegrams.
-- This is **not real pairing**: there is no handshake, and the binding is presumably not kept over a power cycle (open question, section 9).
+- This is **not real pairing**: there is no handshake, and the binding is **not kept over a power cycle** (own test, 2026-11-15): after power off / on the receiver is searching again and latches the AppId of the next Connect telegram it receives.
 - Consequences:
   - Several phones/transmitters can control several MK4.0 receivers independently in range, even with the same device slot, as long as each receiver got the Connect telegram of its own transmitter first.
   - BrickController2 uses a random AppId per installation, so two phones normally have different AppIds.
@@ -491,7 +491,7 @@ The 16 MHz crystal matches the reference clock of XN297L-class transceivers, whi
 - Exact duration of the failsafe timeout (approx. 2 s).
 - Exact part numbers of the RF chip (`2148dMC`) and the `CC1130T` IC.
 - Function of the white battery wire (`3.7V` mid tap?) and the test pads on the back.
-- Is the AppId binding lost on a power cycle (presumably yes)?
+- ~~Is the AppId binding lost on a power cycle?~~ – answered: yes, after power off the receiver latches the AppId of the next Connect telegram (own test, 2026-11-15, section 4).
 - Does a Command telegram with a foreign AppId reset the failsafe timer (does it keep a receiver alive)?
 - Does the device-slot selection still apply in addition to the AppId?
 - Interference with the [MK5.0](MK5.0.md), which uses identical Connect and Command identifiers.

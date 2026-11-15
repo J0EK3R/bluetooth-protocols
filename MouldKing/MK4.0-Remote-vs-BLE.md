@@ -40,7 +40,7 @@ Main consequences (all **[I]**, see section 5): a phone **cannot emulate the han
 | Bit / byte order | address MSByte first, payload LSB first, CRC big endian | the same on air | yes | handset **[C]**, app **[D]** |
 | Telegram layout | Bind 5 B, Control 8 B; identity first, no start/end marker | Connect 8 B, Command 10 B; start/end identifiers `AD…52`, `7D…82`; AppId second | **no** (similar position of the identity bytes, different function) | handset **[C]**, app **[S]** |
 | Channel value encoding | 6 channels × 1 byte (4 analog `01…FF`, neutral `80`; 2 three-state `02 / 80 / FE`), 1 receiver | 4 channels × 3 devices, 1 nibble each (`1…F`, neutral `8`) | **no** | handset **[C]**, app **[S]** |
-| Identity / pairing | 3-byte identity per handset; receiver binds to the first handset until power-cycled | 2-byte AppId, latched from the first Connect telegram after power-on and evaluated in Command telegrams; no real pairing | **no** (both bind to the first source; identity differs) | handset **[C]** + **[I]**, app **[S]** + (own test 2026-11-15) |
+| Identity / pairing | 3-byte identity per handset; receiver binds to the first handset until power-cycled | 2-byte AppId, latched from the first Connect telegram after power-on and evaluated in Command telegrams until power off; no real pairing | **no** (both bind to the first source; identity differs) | handset **[C]** + **[I]**, app **[S]** + (own test 2026-11-15) |
 | Back channel | receiver answers during binding only (not captured) | none | **no** | handset **[I]**, app **[S]** |
 
 ![Frequency map](img/mk4.0_remote_vs_ble_frequency.svg)
