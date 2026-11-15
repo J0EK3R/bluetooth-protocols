@@ -1,7 +1,7 @@
 # PowerBox M Battery – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/PowerBox/PowerBoxMBattery.cs`, `PowerBoxBaseByte.cs`, `PowerBox.cs`, `PowerBoxDeviceManager.cs`, `Protocols/PowerBoxProtocol.cs`, `Protocols/CryptTools.cs`, the platform `PowerBoxPlatformService.cs` files, `UI/Controls/Devices/PowerBoxMBatteryChannelSelectorView.xaml` and `PowerBoxMBatteryDatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-15
 
 <img src="img/powerboxmbattery_image.png" alt="PowerBox M Battery" height="120">
 
@@ -48,8 +48,8 @@ Identical to the [A Series Connect telegram](A-Series.md#2-connect-telegram-8-by
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `M` | channel 0 / output, see 3.1 |
 | 4 | `M` | **same value as offset 3** |
 | 5 | `0x00` | constant |

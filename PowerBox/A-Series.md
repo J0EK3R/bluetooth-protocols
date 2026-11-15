@@ -1,7 +1,7 @@
 # PowerBox A Series – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/PowerBox/PowerBoxASeries.cs`, `PowerBoxBaseNibble.cs`, `PowerBox.cs`, `PowerBoxDeviceManager.cs`, `Protocols/PowerBoxProtocol.cs`, `Protocols/CryptTools.cs`, the platform `PowerBoxPlatformService.cs` files, `UI/Controls/Devices/PowerBoxASeriesChannelSelectorView.xaml` and `PowerBoxASeriesDatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-15
 
 <img src="img/powerboxaseries_image.png" alt="PowerBox A Series module" height="160">
 
@@ -74,8 +74,8 @@ Mode selection and a failsafe timeout are documented for the [MK4.0](../MouldKin
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xA4` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -91,8 +91,8 @@ Identical for A Series and [M Battery](M-Battery.md). Start and end identifier a
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
 | 5 | `0x00` | constant |
@@ -132,8 +132,8 @@ else      →  nibble = 0x0                            // stop
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier** (random, generated on first launch, stored in the app settings, managed by `PowerBoxDeviceManager`).
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every PowerBox telegram in range.
-- Consequence: two phones controlling PowerBox receivers nearby will interfere with each other.
+- **Whether the receiver evaluates these bytes is not verified.** The [MK4.0](../MouldKing/MK4.0.md#4-app-identifier) was found to latch the AppId of the first Connect telegram (own test 2026-11-15) and the MK6.0 is reported to do so ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)); the same behaviour is possible here. There is no handshake-based pairing.
+- Until verified, assume that two phones controlling PowerBox receivers nearby may interfere with each other.
 
 ---
 

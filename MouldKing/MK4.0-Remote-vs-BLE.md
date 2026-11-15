@@ -1,7 +1,8 @@
 # Mould King MK4.0 – Original Handset vs. App (BLE): Layer Comparison
 
 > Sources: [MK4.0 Remote](MK4.0-Remote.md) (own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md), 2026-11-11), [MK4.0](MK4.0.md) (BrickController2 source code and unit tests), [XN297L](../Chips/XN297L.md) (frame format and reference model). Byte sequences of the examples were computed with the XN297L reference model, not typed by hand.
-> Last updated: 2026-11-11
+> Last updated: 2026-11-15
+> AppId behaviour: own test 2026-11-15 and [discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6).
 
 **Evidence markers.** Every statement and every table row carries one of these markers:
 
@@ -12,7 +13,7 @@
 | **[D]** | **derived** by computation with the XN297L reference model ([XN297L §7](../Chips/XN297L.md#7-reference-implementation-python)) |
 | **[I]** | **interpretation**, no direct evidence |
 
-Nothing on the app side is called "measured" in this document.
+Nothing on the app side is called "measured" in this document. The one exception is the AppId behaviour, which was checked with a functional test (one MK4.0, two phones running BrickController2) and is marked **(own test 2026-11-15)**; it is an observation of the receiver's reaction, not an on-air capture.
 
 ## 1. Summary
 
@@ -39,7 +40,7 @@ Main consequences (all **[I]**, see section 5): a phone **cannot emulate the han
 | Bit / byte order | address MSByte first, payload LSB first, CRC big endian | the same on air | yes | handset **[C]**, app **[D]** |
 | Telegram layout | Bind 5 B, Control 8 B; identity first, no start/end marker | Connect 8 B, Command 10 B; start/end identifiers `AD…52`, `7D…82`; AppId second | **no** (similar position of the identity bytes, different function) | handset **[C]**, app **[S]** |
 | Channel value encoding | 6 channels × 1 byte (4 analog `01…FF`, neutral `80`; 2 three-state `02 / 80 / FE`), 1 receiver | 4 channels × 3 devices, 1 nibble each (`1…F`, neutral `8`) | **no** | handset **[C]**, app **[S]** |
-| Identity / pairing | 3-byte identity per handset; receiver binds to the first handset until power-cycled | 2-byte AppId, ignored by the receiver; no pairing | **no** | handset **[C]** + **[I]**, app **[S]** |
+| Identity / pairing | 3-byte identity per handset; receiver binds to the first handset until power-cycled | 2-byte AppId, latched from the first Connect telegram after power-on and evaluated in Command telegrams; no real pairing | **no** (both bind to the first source; identity differs) | handset **[C]** + **[I]**, app **[S]** + (own test 2026-11-15) |
 | Back channel | receiver answers during binding only (not captured) | none | **no** | handset **[I]**, app **[S]** |
 
 ![Frequency map](img/mk4.0_remote_vs_ble_frequency.svg)
@@ -116,7 +117,7 @@ The BLE radio sends every byte LSB first, and an XN297L sends its payload LSB fi
 | 8 | | | | Device 3: C2 / C3 |
 | 9 | | | | `82` end |
 
-Similar position, **different function**: in the handset telegram the first two bytes are an identity that the receiver evaluates (together with the address byte, section 3.10); in the app telegram the AppId is **ignored** by the receiver **[S]**. The app telegrams have start and end identifiers (bitwise complements), the handset telegrams have none. Connect has a purpose of its own (mode selection), Bind has one too (binding); they are not equivalent.
+Similar position, **different function**: in the handset telegram the first two bytes are an identity that the receiver evaluates (together with the address byte, section 3.10); in the app telegram the AppId is latched from the first Connect telegram and then evaluated in Command telegrams (own test 2026-11-15, [MK4.0 §4](MK4.0.md#4-app-identifier)). The app telegrams have start and end identifiers (bitwise complements), the handset telegrams have none. Connect has a purpose of its own (mode selection), Bind has one too (binding); they are not equivalent.
 
 ![Telegram layout and channel values](img/mk4.0_remote_vs_ble_telegrams.svg)
 
@@ -138,7 +139,7 @@ Channel-to-port mapping of the handset (which stick axis is CH1, which port reac
 ### 3.10 Identity, pairing and mode selection
 
 - **Handset:** 3 identity bytes per handset (identity byte in the address, 2-byte ID in the payload). The receiver binds to the **first handset** it accepts after power-on and ignores other handsets until it is power-cycled **[C]**. That it must therefore store the identity is an **interpretation [I]**.
-- **App:** the AppId is random per installation and **ignored**; every receiver reacts to every matching telegram. There is no pairing **[S]**.
+- **App:** the AppId is random per installation **[S]**. A searching receiver latches the AppId of the first Connect telegram and afterwards reacts only to Command telegrams with that AppId (own test 2026-11-15; see [MK4.0 §4](MK4.0.md#4-app-identifier)). There is no handshake, so this is not real pairing. Two phones can therefore control two receivers independently.
 - **Mode selection:** after power-on the receiver locks to the mode of the first source it hears: handset (Bind telegram) or app (Connect telegram) and stays there until the next power cycle ([MK4.0 §1](MK4.0.md#1-sequence), [MK4.0 Remote §1](MK4.0-Remote.md#1-sequence)).
 
 ### 3.11 Back channel

@@ -1,7 +1,8 @@
 # Mould King MK6.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK6.cs`, `MKBaseByte.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs`, the platform `MKPlatformService.cs` files and `MouldKingMK6DatagramTests.cs`; own photos of the module (section 8).
-> Last updated: 2026-11-11
+> Last updated: 2026-11-15
+> AppId behaviour (sections 1, 4, 9): [discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6) by pink0D, **not yet verified by own test**.
 
 <img src="img/mk6_image.png" alt="Mould King MK6.0 module" height="180">
 
@@ -51,7 +52,7 @@ App starts advertising
  Stop: end advertising
 ```
 
-- When advertising starts, the **Connect telegram** is sent first. It puts the receiver into **Bluetooth mode** (app control) instead of remote-control mode. There is **no pairing** (see section 4).
+- When advertising starts, the **Connect telegram** is sent first. It puts the receiver into **Bluetooth mode** (app control) instead of remote-control mode. There is no real pairing, but the receiver reportedly latches the AppId of the first Connect telegram (see section 4).
 - Afterwards the **Command telegram** of the respective device carries its six channel values (section 3).
 - The sender has to transmit continuously; BLE advertising repeats the current data at every advertising interval.
 
@@ -88,8 +89,8 @@ The device slot (Device 1, 2 or 3) of an MK6.0 receiver is selected with the **p
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0x6D` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (latched by the receiver, reported, section 4) |
+| 2 | `AppId[1]` | app identifier byte 1 (latched by the receiver, reported, section 4) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -107,8 +108,8 @@ Compared to the MK4.0 (`AD … 80 80 80 4F 52`) the bytes 3 … 6 are all `0x80`
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x61` / `0x62` / `0x63` | telegram identifier (start) = Device 1 / 2 / 3 |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (must match the latched AppId, reported, section 4) |
+| 2 | `AppId[1]` | app identifier byte 1 (must match the latched AppId, reported, section 4) |
 | 3 | `CH0` | channel 0 / port A |
 | 4 | `CH1` | channel 1 / port B |
 | 5 | `CH2` | channel 2 / port C |
@@ -171,9 +172,14 @@ Neutral Command telegram for Device 1: `61 <AppId0> <AppId1> 80 80 80 80 80 80 9
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain the same **2-byte app identifier** as for the MK4.0 (random, generated on first launch, stored in the app settings; placeholder `APPID = 0x00` in the source code is replaced when the device is created).
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK6.0 telegram in range on its selected device slot.
-- Consequence: two phones controlling MK6.0 receivers with the same device slot nearby will interfere with each other.
-
+- **Reported in [discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6) by pink0D (2026-11-15), not yet verified by own test:** the receiver evaluates these bytes.
+  - After power-on, a searching receiver latches the AppId of the first Connect telegram it receives and afterwards reacts only to Command telegrams with that AppId.
+  - An already connected receiver does not react to further Connect telegrams with a different AppId.
+  - If one Connect telegram reaches several searching receivers, all of them bind to that AppId.
+  - pink0D uses the last two bytes of the ESP32 Bluetooth MAC address as AppId in Connect and Command telegrams.
+- This is not real pairing (no handshake, presumably not kept over a power cycle).
+- The same behaviour was **verified by own test for the MK4.0** (2026-11-15, [MK4.0 section 4](MK4.0.md#4-app-identifier)); for the MK6.0 it is still to be verified.
+- If confirmed, several phones can control several MK6.0 receivers independently in range, even with the same device slot. BrickController2 uses a random AppId per installation.
 ---
 
 ## 5. Encoding into BLE advertising data
@@ -434,6 +440,7 @@ The lid carries round openings (brick-stud style) above the board and the end wa
 
 - Meaning of the constant bytes `80 80 80 80` in the Connect telegram.
 - Whether mode selection (first telegram after power-on) and the failsafe timeout (≈ 2 s) behave as on the MK4.0.
+- **Verify** the AppId latching reported in discussion #6 by own test (two phones, one MK6.0): first Connect telegram wins, foreign Command telegrams ignored; binding lost on power cycle; device slot still applies in addition; foreign Command telegrams and the failsafe timer.
 - Whether the receiver uses the full 8-bit resolution or quantises internally (e.g. dead band around `0x80`).
 - Hardware details (section 8): IC markings (RF chip, motor drivers; needs photos with the lid removed) and the pin assignment of the six output sockets.
 - Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format (no capture yet).

@@ -11,7 +11,7 @@ Two kinds of protocols are covered:
 
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
-All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which **none of these receivers evaluates** – there is no pairing, any receiver in range reacts to every matching telegram. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
+All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which the **MK4.0 evaluates (verified by own test)** and the **MK6.0 reportedly evaluates** ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)): after power-on the receiver latches the app identifier of the first Connect telegram and then reacts only to Command telegrams with that identifier (no real pairing, see [MK4.0 §4](MouldKing/MK4.0.md#4-app-identifier)). For the other Mould King, JIESTAR and PowerBox modules this is not verified. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
 
 ## Contents
 

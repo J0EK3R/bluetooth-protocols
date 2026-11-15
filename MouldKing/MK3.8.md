@@ -1,7 +1,7 @@
 # Mould King MK3.8 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK3_8.cs`, `MKBaseNibble.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `UI/Controls/Devices/MK3_8ChannelSelectorView.xaml` and `MouldKingMK3_8DatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-15
 
 <img src="img/mk3_8_image.png" alt="Mould King MK3.8 module" height="180">
 
@@ -29,7 +29,7 @@ The MK3.8 uses the same radio layer as the other MK modules: the phone builds th
 | Channels | 4 per device, 3 devices | **4 analog + 1 left/right**, 1 device |
 | Channel resolution | nibble, 7 steps per direction | nibble, **7 reverse / 6 forward** steps |
 | Neutral nibble | `0x8` | **`0x9`** |
-| App identifier | 2 bytes (ignored) | **only 1 byte** in the Command telegram (offset 2 = port E), ignored as well |
+| App identifier | 2 bytes (evaluation not verified) | **only 1 byte** in the Command telegram (offset 2 = port E), evaluation not verified as well |
 | Connect telegram | `AD … 80 80 80 4F 52` | `B1 … 80 80 80 4F C1` |
 | Command identifiers | `7D` / `82` | `81` / `C2` |
 | Start/end complement | yes (`+ = 0xFF`) | **no** (`0xB1`/`0xC1`, `0x81`/`0xC2`) |
@@ -72,8 +72,8 @@ Mode selection (first telegram after power-on wins) and a failsafe timeout are d
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xB1` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -89,7 +89,7 @@ Bytes 3 … 6 are the same as in the MK4.0/MK5.0 Connect telegram (`80 80 80 4F`
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x81` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
 | 2 | `0 │ E` | **port E** (left/right) in the low nibble, high nibble `0` – replaces `AppId[1]` |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
@@ -147,8 +147,8 @@ Port E is not proportional – there are only three states.
 
 - The Connect telegram contains the full **2-byte app identifier** (bytes 1 and 2).
 - In the Command telegram only `AppId[0]` is sent (byte 1); byte 2 carries port E. BC2 explicitly overwrites `AppId[1]` with `0x00` in the constructor (*This is an exception – the second byte of the AppIdentifier is used as setvalue for channel 5*).
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK3.8 telegram in range.
-- Consequence: two phones controlling MK3.8 receivers nearby will interfere with each other.
+- **Whether the receiver evaluates these bytes is not verified.** The [MK4.0](MK4.0.md#4-app-identifier) was found to latch the AppId of the first Connect telegram (own test 2026-11-15) and the MK6.0 is reported to do so ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)); the same behaviour is possible here. There is no handshake-based pairing.
+- Until verified, assume that two phones controlling MK3.8 receivers nearby may interfere with each other.
 
 ---
 

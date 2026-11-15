@@ -1,7 +1,8 @@
 # Mould King MK4.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK4.cs`, `MKBaseNibble.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `DeviceManagement/BluetoothAdvertisingDeviceHandler.cs` and the corresponding unit tests; own photos of the receiver board (section 8).
-> Last updated: 2026-11-11
+> Last updated: 2026-11-15
+> AppId behaviour (sections 1, 4, 9): own test with two phones (2026-11-15) and [discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6) by pink0D.
 
 <img src="img/mk4_image.png" alt="Mould King MK4.0 module" height="180">
 
@@ -41,7 +42,7 @@ App starts advertising
  Stop: end advertising
 ```
 
-- When advertising starts, the **Connect telegram** is sent first. It puts the receiver into **Bluetooth mode** (app control) instead of **remote-control mode** (original 2.4 GHz handset). There is **no pairing** (see section 4).
+- When advertising starts, the **Connect telegram** is sent first. It puts the receiver into **Bluetooth mode** (app control) instead of **remote-control mode** (original 2.4 GHz handset). There is no real pairing, but the receiver latches the AppId of the first Connect telegram (see section 4).
 - **Mode selection:** after power-on the receiver locks into the mode of the **first telegrams it receives**:
   - Connect telegram from the app → Bluetooth mode
   - telegrams from the original handset → remote-control mode (handset protocol: [MK4.0 Remote](MK4.0-Remote.md))
@@ -78,8 +79,8 @@ The device slot (Device 1, 2 or 3) of an MK4.0 receiver is selected with the **p
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xAD` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (**latched** by the receiver, section 4) |
+| 2 | `AppId[1]` | app identifier byte 1 (**latched** by the receiver, section 4) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -95,8 +96,8 @@ The Connect telegram is identical to that of the [MK5.0](MK5.0.md#2-connect-tele
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x7D` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (must match the latched AppId, section 4) |
+| 2 | `AppId[1]` | app identifier byte 1 (must match the latched AppId, section 4) |
 | 3 | `C0 │ C1` | Device 1: channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C2 │ C3` | Device 1: channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
 | 5 | `C0 │ C1` | Device 2: port A, port B |
@@ -156,9 +157,17 @@ Neutral Command telegram: `7D <AppId0> <AppId1> 88 88 88 88 88 88 82`.
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier**.
 - It is generated randomly on first launch and stored persistently in the app settings (`AppIdentifierService`).
 - In the source code, the placeholder `APPID = 0x00` is used there initially and replaced when the device is created.
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK4.0 telegram in range on its selected device slot (section 1.2).
-- Consequence: two phones controlling MK4.0 receivers with the same device slot nearby will interfere with each other.
-
+- **The receiver evaluates these bytes.** After power-on, a searching receiver **latches the AppId of the first Connect telegram** it receives. From then on it reacts only to Command telegrams carrying **that** AppId; Command telegrams with another AppId are ignored.
+- **Verified (own test, 2026-11-15):** one MK4.0 and two Android phones, each running BrickController2 (each with its own random AppId). The MK4.0 reacted only to the BrickController2 instance whose Connect telegram it received first (the one that "paired" it); the Command telegrams of the other phone were ignored.
+- **Reported in [discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6) by pink0D, not verified by own test:**
+  - An already connected receiver does not react to further Connect telegrams with a different AppId.
+  - If one Connect telegram reaches several receivers that are all searching after power-on, **all of them** bind to that AppId.
+  - pink0D uses the last two bytes of the ESP32 Bluetooth MAC address as AppId in Connect and Command telegrams.
+- This is **not real pairing**: there is no handshake, and the binding is presumably not kept over a power cycle (open question, section 9).
+- Consequences:
+  - Several phones/transmitters can control several MK4.0 receivers independently in range, even with the same device slot, as long as each receiver got the Connect telegram of its own transmitter first.
+  - BrickController2 uses a random AppId per installation, so two phones normally have different AppIds.
+  - The device slot (section 1.2) is a separate selection; whether it still applies in addition to the AppId is an open question (section 9).
 ---
 
 ## 5. Encoding into BLE advertising data
@@ -482,5 +491,8 @@ The 16 MHz crystal matches the reference clock of XN297L-class transceivers, whi
 - Exact duration of the failsafe timeout (approx. 2 s).
 - Exact part numbers of the RF chip (`2148dMC`) and the `CC1130T` IC.
 - Function of the white battery wire (`3.7V` mid tap?) and the test pads on the back.
+- Is the AppId binding lost on a power cycle (presumably yes)?
+- Does a Command telegram with a foreign AppId reset the failsafe timer (does it keep a receiver alive)?
+- Does the device-slot selection still apply in addition to the AppId?
 - Interference with the [MK5.0](MK5.0.md), which uses identical Connect and Command identifiers.
 - ~~Whether the original 2.4 GHz handset uses the same RF address `C1 … C5` and telegram format~~ – answered: no, the handset uses its own frequencies, addresses and telegrams with binding, see [MK4.0 Remote](MK4.0-Remote.md).

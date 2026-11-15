@@ -1,7 +1,7 @@
 # JIESTAR SCM4 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/JieStar/JieStarSCM4.cs`, `JieStarBase.cs`, `JieStar.cs`, `JieStarDeviceManager.cs`, `Protocols/JieStarProtocol.cs`, `Protocols/CryptTools.cs`, the platform `JieStarPlatformService.cs` files, `UI/Controls/Devices/JieStarSCM4ChannelSelectorView.xaml` and `JieStarSCM4DatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-15
 
 <img src="img/jiestarscm4_image.png" alt="JIESTAR SCM4 module" height="180">
 
@@ -83,8 +83,8 @@ Mode selection and a failsafe timeout are documented for the [MK4.0](../MouldKin
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xA4` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 … 6 | `0x80` | constant (meaning unknown) |
 | 7 | `0x5B` | telegram identifier (end) |
 
@@ -97,8 +97,8 @@ The Connect telegram is the same for all three device slots (only the whitening 
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x40` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `A │ B` | channel 0 / port A (high nibble), channel 1 / port B (low nibble) |
 | 4 | `C │ D` | channel 2 / port C (high nibble), channel 3 / port D (low nibble) |
 | 5 | `0x80` | constant |
@@ -144,8 +144,8 @@ The raw telegram is the same for Device 1, 2 and 3.
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain a **2-byte app identifier** (random, generated on first launch, stored in the app settings, managed by `JieStarDeviceManager`).
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every SCM4 telegram in range on its selected device slot.
-- Consequence: two phones controlling SCM4 receivers with the same device slot nearby will interfere with each other.
+- **Whether the receiver evaluates these bytes is not verified.** The [MK4.0](../MouldKing/MK4.0.md#4-app-identifier) was found to latch the AppId of the first Connect telegram (own test 2026-11-15) and the MK6.0 is reported to do so ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)); the same behaviour is possible here. There is no handshake-based pairing.
+- Until verified, assume that two phones controlling SCM4 receivers with the same device slot nearby may interfere with each other.
 
 ---
 

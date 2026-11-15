@@ -2,7 +2,7 @@
 
 > Source: own captures with the [XN297L sniffer](../Tools/xn297l-sniffer/README.md) (nRF52840 dongle), three MK4.0 handsets and one MK4.0 receiver, 2026-11-11.
 > All values in this document are **measured**; interpretations are marked as such.
-> Last updated: 2026-11-13 (explanation of the sniffer RF channels)
+> Last updated: 2026-11-15
 
 ## Overview
 
@@ -222,7 +222,7 @@ Layer-by-layer comparison with side-by-side example frames: [MK4.0 Remote vs. BL
 | Address (`TX_ADDR`) | `<identity> 03 4B 44 48` (bind), `<identity> 6C DB 6E 0E` (operation) | `C1 C2 C3 C4 C5` |
 | Telegrams | Bind (5 bytes), Control (8 bytes) | Connect (8 bytes), Command (10 bytes) |
 | Channel values | 6 × 1 byte (4 analog, 2 three-state) | 3 devices × 4 nibbles |
-| Pairing | yes, receiver binds to the first handset | no, app identifier is ignored |
+| Pairing | yes, receiver binds to the first handset | no real pairing, but the receiver latches the app identifier of the first Connect telegram (own test 2026-11-15, [MK4.0 §4](MK4.0.md#4-app-identifier)) |
 | Devices | 1 receiver per handset | 3 device slots in a shared telegram |
 
 ## 8. Capturing with the XN297L sniffer

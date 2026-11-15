@@ -1,7 +1,7 @@
 # Mould King MK5.0 – Bluetooth Protocol
 
 > Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/MouldKing/MK5.cs`, `MKBaseNibble.cs`, `MouldKing.cs`, `Protocols/MKProtocol.cs`, `Protocols/CryptTools.cs`, `UI/Controls/DeviceChannelLabel.cs`, `UI/Controls/Devices/MK5ChannelSelectorView.xaml` and `MouldKingMK5DatagramTests.cs`.
-> Last updated: 2026-11-06
+> Last updated: 2026-11-15
 
 <img src="img/mk5_image.png" alt="Mould King MK5.0 module" height="180">
 
@@ -73,8 +73,8 @@ Mode selection (first telegram after power-on wins) and a failsafe timeout are d
 | Offset | Value | Meaning |
 |---|---|---|
 | 0 | `0xAD` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `0x80` | constant (meaning unknown) |
 | 4 | `0x80` | constant (meaning unknown) |
 | 5 | `0x80` | constant (meaning unknown) |
@@ -90,8 +90,8 @@ Identical to the [MK4.0 Connect telegram](MK4.0.md#2-connect-telegram-8-bytes-ra
 | Offset | Content | Meaning |
 |---|---|---|
 | 0 | `0x7D` | telegram identifier (start) |
-| 1 | `AppId[0]` | app identifier byte 0 (ignored by the receiver) |
-| 2 | `AppId[1]` | app identifier byte 1 (ignored by the receiver) |
+| 1 | `AppId[0]` | app identifier byte 0 (evaluation not verified) |
+| 2 | `AppId[1]` | app identifier byte 1 (evaluation not verified) |
 | 3 | `AB │ T` | channel 0 = drive (high nibble), channel 1 = turret rotation (low nibble) |
 | 4 | `C │ AB+T` | channel 2 = canon shot (high nibble), channel 3 = turn on the spot (low nibble) |
 | 5 … 8 | `0x80` | constant |
@@ -164,8 +164,8 @@ Any value ≠ 0 fires, the sign is ignored.
 ## 4. App identifier
 
 - Bytes 1 and 2 of both telegrams contain the same **2-byte app identifier** as for the other MK modules (random, generated on first launch, stored in the app settings).
-- **The receiver ignores these bytes.** There is no pairing between app and receiver: any app ID is accepted, and a receiver reacts to every MK5.0 telegram in range.
-- Consequence: two phones controlling MK5.0 receivers nearby will interfere with each other.
+- **Whether the receiver evaluates these bytes is not verified.** The [MK4.0](MK4.0.md#4-app-identifier) was found to latch the AppId of the first Connect telegram (own test 2026-11-15) and the MK6.0 is reported to do so ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)); the same behaviour is possible here. There is no handshake-based pairing.
+- Until verified, assume that two phones controlling MK5.0 receivers nearby may interfere with each other.
 
 ---
 
