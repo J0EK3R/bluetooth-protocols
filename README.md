@@ -74,7 +74,8 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 | Folder | Tool |
 |---|---|
 | [Tools/nrf-sniffer-ble](Tools/nrf-sniffer-ble/README.md) | nRF Sniffer for Bluetooth LE on the nRF52840 MDK USB Dongle: firmware backup and installation of the Wireshark capture tool – for BLE advertising and GATT connections |
-| [Tools/xn297l-sniffer](Tools/xn297l-sniffer/README.md) | XN297L sniffer: firmware for the nRF52840 MDK USB Dongle, Wireshark extcap and Lua dissector – receives XN297L frames (e.g. from original remote controls) and decodes address, payload and CRC |
+| [Tools/xn297l-sniffer](Tools/xn297l-sniffer/README.md) | XN297L sniffer: firmware for the nRF52840 MDK USB Dongle, Wireshark extcap and Lua dissector – receives XN297L frames (e.g. from original remote controls) and decodes address, payload and CRC; raw mode for unknown chips |
+| [Tools/Reverse-Engineering-Guide.md](Tools/Reverse-Engineering-Guide.md) | Guide: decoding the radio link of a new device together with an AI assistant – phases, sniffer settings, analysis techniques, pitfalls, checklist |
 
 ## Repository layout
 
@@ -100,6 +101,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 │   ├── M-Battery.md
 │   └── img/
 ├── Tools/
+│   ├── Reverse-Engineering-Guide.md # how to decode a new device together with an AI
 │   ├── nrf-sniffer-ble/ # nRF Sniffer for Bluetooth LE: firmware backup, installation notes
 │   └── xn297l-sniffer/  # nRF52840 dongle firmware, Wireshark extcap + Lua dissector
 └── MouldKing/
