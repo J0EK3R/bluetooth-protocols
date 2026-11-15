@@ -1,7 +1,7 @@
 # CaDA CJV8011 / CJV1010 – Capture plan for the 2.4 GHz radio link
 
 > Purpose: step-by-step measurement guide for the radio link between the [CJV8011](CJV8011.md) handset and the [CJV1010](CJV1010.md) receiver, mainly with the nRF52840 MDK USB dongle ([XN297L sniffer](../Tools/xn297l-sniffer/README.md) in raw mode, [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md)); SDR and logic analyzer as fallbacks.
-> Status: **in progress** – session 0: R0.3, R0.4 done (no XN297L frames, C2 answered); R0.1, R0.2 (BLE) deferred. Session 1: R1.0 … R1.6 done – **handset found** on 2446 / 2466 MHz, 1 Mbps, repeating 32-byte block after an `AA` preamble (section 6.1); Session 2: R2.1 … R2.4 done – frame structure decoded: constant 512-bit header, then 64-bit codeword symbols (DSSS-like), operating channels 2406 / 2427 / 2446 / 2462 MHz, control state in symbol positions 14 … 17 (section 7.1); R2.5 … R2.7 done – complete frame (header + 30 symbols, 2440 chips), hopping order 2406 → 2427 → 2446 → 2462 MHz, cycle 33.6 ms (section 7.3); Session 4: R4.1 … R4.3 done – **telegram decoded**: 64-chip symbol = 4 bits, control state = two 4-bit direction masks (section 9.1). Next: session 3 (pairing, ID in positions 2 … 7). Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
+> Status: **in progress** – session 0: R0.3, R0.4 done (no XN297L frames, C2 answered); R0.1, R0.2 (BLE) deferred. Session 1: R1.0 … R1.6 done – **handset found** on 2446 / 2466 MHz, 1 Mbps, repeating 32-byte block after an `AA` preamble (section 6.1); Session 2: R2.1 … R2.4 done – frame structure decoded: constant 512-bit header, then 64-bit codeword symbols (DSSS-like), operating channels 2406 / 2427 / 2446 / 2462 MHz, control state in symbol positions 14 … 17 (section 7.1); R2.5 … R2.7 done – complete frame (header + 30 symbols, 2440 chips), hopping order 2406 → 2427 → 2446 → 2462 MHz, cycle 33.6 ms (section 7.3); Session 4: R4.1 … R4.3 done – **telegram decoded**: 64-chip symbol = 4 bits, control state = two 4-bit direction masks (section 9.1). Session 3: R3.1, R3.2 done – handset ID in positions 8 … 13 (H1 `33A400`, H2 `572444`), automatic pairing after power-on via link frames, link ID `255111` from the receiver (section 8.1); R3.3a, R3.6 … R3.10 done – H2 gets the same link value `255111`, no explicit pairing needed, no receiver beacon; the supposed second codeword set was a 2-bit capture offset (section 8.5); unidentified weak frames after receiver power-on, next: R3.11 … R3.13. Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
 > Last updated: 2026-11-14 (raw mode of the console tool instead of the separate `raw.py` script)
 
 ## Contents
@@ -36,10 +36,10 @@ the radio layer.
 | C2 | Is it an XN297L-compatible frame (preamble `71 0F 55`) like Mould King / JIESTAR? | **answered: no** – no frame with valid CRC in R0.3 (handset only) and R0.4 (handset + receiver), promiscuous mode, all channels, `nrf1m` (2026-11-14) |
 | C3 | Frequency / frequencies, data rate, modulation | **answered:** 1 Mbps (chip rate) GFSK; bind: **2446 and 2466 MHz**; operation: **2406, 2427, 2446, 2462 MHz** (R1.1 … R2.4) |
 | C4 | Preamble, sync word (length, value), frame structure: length field, payload length, trailer, CRC, bit order | **mostly:** preamble `AA …`, 512-bit header, `1101`, **30 symbols** of 64-bit codewords from a small codebook, `1001` (sections 7.1, 7.3); meaning of the symbols and the check open |
-| C5 | Pairing: how is the pairing mode entered, is there a bind channel / bind address, does the handset have a fixed ID, is the receiver bound to one handset afterwards? | open (session 3) |
+| C5 | Pairing: how is the pairing mode entered, is there a bind channel / bind address, does the handset have a fixed ID, is the receiver bound to one handset afterwards? | **partly:** handset ID fixed in positions 8 … 13 (H1 `33A400`, H2 `572444`); bind channels 2466 MHz + one handset-specific channel (H1 2446, H2 2443 MHz); after power-on bind → link (≈ 0.3 s) → operation automatically, link ID `255111` in positions 2 … 7 (R3.1, R3.2); explicit pairing and binding to one handset open (R3.3a) |
 | C6 | Telegram layout: encoding of the 4 channels × 3 states, effect of the direction switches (handset-side or flag in the telegram) | **answered:** two 4-bit masks (A in position 14, B in 15; red 1, blue 2, black 4, yellow 8), check symbols 15 − A / 15 − B; reversal switches act in the handset (bit moves to the other mask) (R4.1 … R4.3) |
 | C7 | Frequency hopping (channels, order, period) | **answered:** bind 2446 / 2466 MHz, a frame every 29.6 ms per channel; operation **2406 → 2427 → 2446 → 2462 MHz**, frames 7.2 ms apart, 12.2 ms pause, cycle 33.6 ms (R2.7) |
-| C8 | Does the receiver transmit (acknowledge, telemetry)? | open (sessions 2, 3) |
+| C8 | Does the receiver transmit (acknowledge, telemetry)? | **open, very likely** – the handset leaves the bind mode only when a receiver is on (R3.2, R3.9); no beacon without a handset (R3.6); receiver frames not yet identified – candidates: weak frames of R3.7 (section 8.5, R3.11 … R3.13) |
 | C9 | Chip family (LT8900 / LT8910 class or other)? | **hypothesis:** Cypress CYRF6936 / CYRF7936 class DSSS (64-chip codewords, 12 MHz crystal); LT8900 does not fit (section 7.1); confirm with session 6 |
 
 Writing convention as in the [SCM8 capture plan](../JieStar/SCM8-Capture-Plan.md): only measured
@@ -121,7 +121,7 @@ Wi-Fi off for the session if possible (or at least keep it in the same state); k
 | 0 Exclusions | handset on, receiver off | R0.1 … R0.4 | C1, C2 | 15 min | **partly** – R0.3, R0.4 done (no XN297L); R0.1, R0.2 (BLE) deferred, only needed if session 1 finds nothing |
 | 1 Find | handset on / off, receiver off and on | R1.0 … R1.8 | C3, C4, C7 | 45 min | **done** (R1.0 … R1.6) – transmitter found; R1.7, R1.8 replaced by R2.4 |
 | 2 Lock on | handset + receiver | R2.1 … R2.7 | C4, C7, C8, C9 | 45 min | **done** – R2.1 … R2.7 |
-| 3 Pairing | pairing sequences | R3.1 … R3.5 | C5, C8 | 30 min | open |
+| 3 Pairing | pairing sequences | R3.1 … R3.13 | C5, C8 | 30 min | **partly** – R3.1 … R3.10 done (R3.3 aborted, replaced by R3.3a); R3.11 … R3.13 open |
 | 4 Mapping | paired, motors on all ports | R4.1 … R4.4 | C6 | 30 min | **done** – R4.1 … R4.3; R4.4 not needed (no intermediate values: each symbol is a mask) |
 | 5 SDR | only if session 1 finds nothing | R5.1 … R5.3 | C3, C4 | 60 min | fallback |
 | 6 Logic analyzer | receiver board open | R6.1, R6.2 | C3, C4, C9 | 60 min | optional |
@@ -399,6 +399,126 @@ The pairing procedure is not yet documented. First find out *how* pairing is don
 Questions: is there a separate bind channel / sync word (like 2411 MHz for SCM8 / MK4.0)? Does a
 handset ID appear in the frames, fixed over power cycles (R3.2) and different between H1 and H2
 (R3.4)? Does the receiver answer during pairing (C8)?
+
+### 8.1 Results R3.1, R3.2 (2026-11-15)
+
+Raw mode, sync `AA9388B0CA`, `--raw-length 250`. Nibble notation of the symbol positions as in
+[CJV8011.md §2.3](CJV8011.md#23-frame-content-as-nibbles).
+
+| Run | State | Frames | Result |
+|---|---|---|---|
+| R3.1 | **H2** on, receiver off, sweep 0 … 83 | 28 | bind frames on **2443** (13) and **2466 MHz** (15) – H1 uses 2446 / 2466 |
+| R3.2 | H1, receiver on (paired with H1), H1 switched off / on 3 × and one channel operated, 2446 MHz | 1075 | after every power-on the same sequence bind → link → operation, ID `255111` every time |
+| R3.3 | H2 to be paired with the receiver, 2446 MHz | – | aborted, nothing received (H2 binds on 2443 MHz, not on the captured 2446 MHz) |
+
+Frames (positions 0 … 22; header identical for H1 and H2):
+
+```
+                     0-7       8-13   14 15 16 17 18-22
+H1 bind              30000000  33A400 0  0  0  0  6DD62
+H2 bind              30000000  572444 0  0  0  0  6DD68
+H1 link (≈ 0.3 s)    30255111  33A400 0  0  0  0  6DD64
+H1 operation         30255111  33A400 A  B  ~A ~B D66DB
+```
+
+- **Positions 8 … 13 = handset ID** (24 bits): H1 `33A400`, H2 `572444`; the same in bind, link
+  and operation frames.
+- The second bind channel depends on the handset (H1 2446 MHz, H2 2443 MHz); 2466 MHz is used by
+  both. *Interpretation:* derived from the handset ID.
+- **Pairing is automatic after every power-on** (receiver already paired): the handset sends bind
+  frames (positions 2 … 7 = `000000`) until the receiver answers (1.5 … 8 s in R3.2), then about
+  0.3 s of **link frames** (positions 2 … 7 = `255111`, masks `0 0`, position 22 = `4`), then
+  operation frames. No user action is needed.
+- **Positions 2 … 7 = link / receiver ID** `255111`: identical after all 3 power cycles. Because
+  the bind frames contain `000000` and the ID appears right after the receiver has answered,
+  *interpretation:* the ID comes from the **receiver**, which therefore transmits (C8) – the
+  receiver frames have not been captured yet.
+- Position 22 is a frame type or check nibble: H1 bind `2`, H2 bind `8`, link `4`, operation `B`.
+
+### 8.2 Next runs (done, results in section 8.3)
+
+| Run | State | Settings | Duration | Question |
+|---|---|---|---|---|
+| R3.3a | receiver on (paired with H1), H1 off, **H2 on**; does the receiver react to H2 (motors)? | `$RAW --sync AA9388B0CA --raw-length 250 --channels 43,46,66 --dwell 300` | 1 min | does H2 get the link ID `255111` or another one, and does the receiver accept H2 without explicit pairing? |
+| R3.6 | receiver on, both handsets off | `--sync AAAAAA --raw-length 64 --channels 0-83 --dwell 50`, then the same with `--sync AA9388B0CA` | 2 × 1 min | does the receiver send anything on its own (beacon)? |
+| R3.7 | H1 on, receiver switched on **later** (after 10 s), on the bind channel 2466 MHz | `--sync AAAAAA --raw-length 250 --channels 66 --dwell 0` | 30 s | capture the **receiver answer** (frames that are neither handset bind nor link frames) |
+
+### 8.3 Results R3.3a, R3.6, R3.7 (2026-11-15)
+
+| Run | State | Settings | Frames | Result |
+|---|---|---|---|---|
+| R3.3a | receiver on (last paired with H1), H1 off, **H2 on**; the motor runs (user) | `AA9388B0CA` / 250, channels 43, 46, 66, 300 ms dwell | 311 | H2 bind frames on 2443 / 2466 MHz, after 3.2 s operation frames on **2443 MHz** with link ID **`255111`** – the same as with H1 |
+| R3.6a | receiver on, both handsets off | `AAAAAA` / 64, 0 … 83, 50 ms | 51 | noise only (same level as R1.0) |
+| R3.6b | same | `AA9388B0CA` / 250, 0 … 83, 50 ms | 0 | nothing |
+| R3.7 | H1 on, receiver switched on later, 2466 MHz | `AAAAAA` / 250, dwell 0 | 59 | H1 bind frames until ≈ 7.5 s (then the handset leaves the bind channel); one H1 bind frame captured 2 bits late (see section 8.5); **4 weak unidentified frames** (−85 dBm) from 7.3 s on |
+
+H2 operation frame:
+
+```
+H2 operation  30255111  572444  A  B  ~A ~B  D66D1
+H1 operation  30255111  33A400  A  B  ~A ~B  D66DB
+```
+
+- **Both handsets use the same link value `255111`** after connecting. The receiver accepts H2
+  without any explicit pairing step – it reacts to every CaDA handset that starts in its range.
+  *Interpretation:* `255111` is the receiver ID (or a constant); a second receiver would decide.
+  The handset changes from bind to link frames only when a receiver is on, so the receiver must
+  transmit something (C8).
+- H2 operates on 2443 MHz (and not on 2446 / 2466 MHz) – the operating channel set depends on the
+  handset (*interpretation:* derived from the handset ID, like the bind channel).
+- Position 22 of the operation frame differs between the handsets (H1 `B`, H2 `1`) –
+  *interpretation:* check nibble over the frame.
+- The receiver does not send anything on its own (R3.6).
+
+### 8.4 Runs R3.8 … R3.10 (done, results in section 8.5)
+
+| Run | State | Settings | Duration |
+|---|---|---|---|
+| R3.8 | receiver off, H1 on | `$RAW --sync AA4E22C32B --raw-length 250 --channels 66 --dwell 0` | 1 min |
+| R3.9 | receiver off, H1 on, receiver on after 20 s | same | 1 min |
+| R3.10 | H1 on, receiver on, operation, some channels operated | same sync, `--channels 6,27,46,62 --dwell 9` | 1 min |
+
+### 8.5 Results R3.8 … R3.10 (2026-11-15) – no second codeword set
+
+| Run | Frames | Result |
+|---|---|---|
+| R3.8 | 613 on 2466 MHz (receiver off) | all H1 **bind** frames, read 2 bits late |
+| R3.9 | 211 on 2466 MHz | H1 bind frames, read 2 bits late; user: frames only after the receiver was switched on |
+| R3.10 | 553 on 2406 MHz | H1 **operation** frames, read 2 bits late (control masks `04`, `00`, `06`, `05`, `14`, `0C`, `84`, `24` – black was held in direction B most of the time) |
+
+Correction of section 8.3: the frame of R3.7 at 2.6 s and all frames of R3.8 … R3.10 are **normal
+handset frames captured 2 bits late**, not a second codeword set:
+
+- The preamble `AA …` is alternating, so a sync word that starts with `AA` also matches 2 bits
+  later. `AA 4E 22 C3 2B` is exactly the handset stream `AA 93 88 B0 CA …` shifted by 2 bits.
+- The "set 2" codewords are the set-1 codewords rotated by 2 chips (all 14 found values), and the
+  gap bits `0101` are `1101` with the 2 neighbour chips.
+- Read with the 2 missing bits prepended, every frame decodes with codeword set 1, gap `1101`,
+  mean 0.2 chip errors per symbol.
+
+Lesson for the tool: with the raw mode, a sync word that begins with preamble bytes can lock at
+several bit phases. Use a sync word that starts after the preamble (e.g. `9388B0CAD0`) or check
+the alignment in the analysis.
+
+**Unidentified weak frames (R3.7).** Frames #40 (7.3 s), #55, #56, #58 (13.9 … 17.7 s), −85 …
+−87 dBm, appear from the moment the handset left the bind channel, i.e. right after the receiver
+was switched on. After `AA AA AA` they share ≈ 370 bits (≈ 46 bytes), e.g. `… 3A CE 7D 02 5D …`
+(#40 / #56 shifted by 4 bits), then noise. They contain no codeword of set 1 at any bit offset and
+no 64-chip periodicity. *Interpretation:* candidate for the receiver's transmission (weaker because
+the receiver was farther away), or an unrelated device.
+
+### 8.6 Next runs
+
+| Run | State | Settings | Duration | Question |
+|---|---|---|---|---|
+| R3.11 | dongle **close to the receiver** (10 cm), handset H1 far away (2 m); H1 on, receiver switched on after 10 s | `$RAW --sync 3ACE7D025D --raw-length 250 --channels 66 --dwell 0` | 1 min | do the unidentified frames appear, and are they stronger near the receiver? |
+| R3.12 | same position, receiver on, both handsets off | same | 1 min | does the receiver send them without a handset? |
+| R3.13 | same position, H1 on, receiver on, operation | `--sync 3ACE7D025D --raw-length 64 --channels 0-83 --dwell 50` | 1 min | channels of the unidentified frames during operation |
+
+---|---|---|---|---|
+| R3.8 | **receiver off**, H1 on | `$RAW --sync AA4E22C32B --raw-length 250 --channels 66 --dwell 0` (sync = header of set 2) | 1 min | does the handset itself send set-2 frames? |
+| R3.9 | receiver off, H1 on, then **receiver on after 20 s** (note the time) | same | 1 min | set-2 frames only after the receiver is on → receiver answer |
+| R3.10 | H1 on, receiver on, operation | same sync, `--channels 6,27,46,62 --dwell 9` | 1 min | does the receiver answer during operation (12.2 ms pause, C8)? |
 
 ---
 
