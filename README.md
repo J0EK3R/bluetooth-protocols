@@ -73,6 +73,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 
 | Folder | Tool |
 |---|---|
+| [Tools/nRF52840-MDK-USB-Dongle.md](Tools/nRF52840-MDK-USB-Dongle.md) | <img src="Tools/img/nrf52840_mdk_usb_dongle.jpg" alt="" height="48"> nRF52840 MDK USB Dongle (makerdiary): the USB stick both capture tools run on |
 | [Tools/nrf-sniffer-ble](Tools/nrf-sniffer-ble/README.md) | nRF Sniffer for Bluetooth LE on the nRF52840 MDK USB Dongle: firmware backup and installation of the Wireshark capture tool – for BLE advertising and GATT connections |
 | [Tools/xn297l-sniffer](Tools/xn297l-sniffer/README.md) | XN297L sniffer: firmware for the nRF52840 MDK USB Dongle, Wireshark extcap and Lua dissector – receives XN297L frames (e.g. from original remote controls) and decodes address, payload and CRC; raw mode for unknown chips |
 | [Tools/Reverse-Engineering-Guide.md](Tools/Reverse-Engineering-Guide.md) | Guide: decoding the radio link of a new device together with an AI assistant – phases, sniffer settings, analysis techniques, pitfalls, checklist |
@@ -101,7 +102,9 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 │   ├── M-Battery.md
 │   └── img/
 ├── Tools/
+│   ├── nRF52840-MDK-USB-Dongle.md   # the USB stick both tools run on
 │   ├── Reverse-Engineering-Guide.md # how to decode a new device together with an AI
+│   ├── img/             # photos of the dongle
 │   ├── nrf-sniffer-ble/ # nRF Sniffer for Bluetooth LE: firmware backup, installation notes
 │   └── xn297l-sniffer/  # nRF52840 dongle firmware, Wireshark extcap + Lua dissector
 └── MouldKing/
@@ -134,3 +137,5 @@ The set images in `MouldKing/img/mkh4_set_*.png` are product photos from the Mou
 The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` and the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg`, and the CaDA CJV1010 / CJV8011 photos `CaDA/img/cjv1010_{housing,board,chip}_*`, `CaDA/img/cjv1010_battery.png` and `CaDA/img/cjv8011_{housing,board,chip}_*` are own photos of the repository author (cropped, scaled down, metadata removed; free-standing objects with the background removed).
 
 The product photos `CaDA/img/cjv1010_receiver_*.png` and `CaDA/img/cjv8011_remote_*.png` are taken from the klemmshop.de product pages ([CJV1010](https://www.klemmshop.de/CaDA-CJV1010-Klemmbaustein-4-Kanal-Empfaenger-/-Akkubox-24-GHz), [CJV8011](https://www.klemmshop.de/CaDA-CJV8011-Klemmbaustein-4-Kanal-Fernsteuerung-24-GHz_2?lang=eng)), © CaDA / klemmshop.de, scaled down to 400 × 400 px (background removed and cropped).
+
+The photos `Tools/img/nrf52840_mdk_usb_dongle*.jpg` are product photos from the [amazon.de product page](https://www.amazon.de/GeeekPi-nRF52840-MDK-USB-Dongle-Geh%C3%A4use/dp/B07TSJHTSY) of the nRF52840 MDK USB Dongle (makerdiary), scaled down.
