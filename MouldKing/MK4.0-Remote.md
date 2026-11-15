@@ -22,6 +22,10 @@ The handset uses a completely different radio configuration than the app (BLE ad
 [MK4.0 §5](MK4.0.md#5-encoding-into-ble-advertising-data)): different frequencies, a different
 address and a different telegram format. Only the XN297L frame layer (preamble, scrambler, CRC) is the same.
 
+<img src="img/mk4_remote_front.png" alt="Mould King MK4.0 handset, front" height="240">
+
+*Image: product photo from the [amazon.de product page](https://www.amazon.de/Mould-King-wiederaufladbarer-Fernbedienung-programmierbar/dp/B09KY8LL3Y) (handset with receiver), handset cut out, background removed, scaled down; see "Image credits" in the [main README](../README.md#image-credits).*
+
 ---
 
 ## 1. Sequence

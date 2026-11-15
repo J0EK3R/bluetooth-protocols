@@ -24,7 +24,7 @@ The Mould King modules in the first table (except the MK4.0 handset, which trans
 | <img src="MouldKing/img/mk3_image.png" alt="" height="48"> | [MouldKing/MK3.0.md](MouldKing/MK3.0.md) | MK3.0 module | 2 analog (byte) + 2 on/off functions | `AA…55` / `66…99` |
 | <img src="MouldKing/img/mk3_8_image.png" alt="" height="48"> | [MouldKing/MK3.8.md](MouldKing/MK3.8.md) | MK3.8 module | 4 analog (nibble) + left/right | `B1…C1` / `81…C2` |
 | <img src="MouldKing/img/mk4_image.png" alt="" height="48"> | [MouldKing/MK4.0.md](MouldKing/MK4.0.md) | MK4.0 receiver | 4 analog (nibble) × 3 devices, shared telegram | `AD…52` / `7D…82` |
-|  | [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz; [capture plan](MouldKing/MK4.0-Capture-Plan.md) for the open questions |
+| <img src="MouldKing/img/mk4_remote_front.png" alt="" height="48"> | [MouldKing/MK4.0-Remote.md](MouldKing/MK4.0-Remote.md) | MK4.0 original 2.4 GHz handset (native XN297L, captured with the XN297L sniffer) | 4 analog (byte) + 2 three-state, 1 receiver, binding | bind on 2411 MHz, hopping 2423/2441/2458/2466 MHz; [capture plan](MouldKing/MK4.0-Capture-Plan.md) for the open questions |
 | <img src="MouldKing/img/mk5_image.png" alt="" height="48"> | [MouldKing/MK5.0.md](MouldKing/MK5.0.md) | MK5.0 tank module | drive, turret, shot, turn + turret lock | `AD…52` / `7D…82` (same as MK4.0) |
 | <img src="MouldKing/img/mk6_image.png" alt="" height="48"> | [MouldKing/MK6.0.md](MouldKing/MK6.0.md) | MK6.0 module | 6 analog (byte) × 3 devices, telegram per device | `6D…92` / `61…63` |
 
@@ -133,6 +133,8 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
 The device images in `*/img/*_image.png` (Mould King, JIESTAR, PowerBox, CaDA) are taken from [BrickController2](https://github.com/J0EK3R/brickcontroller2) (`BrickController2/UI/Images`), © István Murvai, Vít Německý and Contributors, MIT License.
 
 The set images in `MouldKing/img/mkh4_set_*.png` are product photos from the Mould King online store ([mouldkingcorp.com](https://mouldkingcorp.com)), © Mould King, scaled down to 240 × 240 px. The image of 17025 is taken from the Mould King MK+ app.
+
+The image `MouldKing/img/mk4_remote_front.png` is cut out of a product photo on the [amazon.de product page](https://www.amazon.de/Mould-King-wiederaufladbarer-Fernbedienung-programmierbar/dp/B09KY8LL3Y) (MK4.0 handset with receiver), © Mould King / seller, background removed and scaled down.
 
 The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` and the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg`, and the CaDA CJV1010 / CJV8011 photos `CaDA/img/cjv1010_{housing,board,chip}_*`, `CaDA/img/cjv1010_battery.png` and `CaDA/img/cjv8011_{housing,board,chip}_*` are own photos of the repository author (cropped, scaled down, metadata removed; free-standing objects with the background removed).
 

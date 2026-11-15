@@ -16,6 +16,12 @@ Taken from [BrickController2](https://github.com/J0EK3R/brickcontroller2) (`Bric
 | `mk6_image.png` | [MK6.0.md](../MK6.0.md) |
 | `mkh4_image.png` | [MKH4.0.md](../MKH4.0.md) |
 
+## Product photos (PNG)
+
+| File | Content | Used in |
+|---|---|---|
+| `mk4_remote_front.png` | MK4.0 original handset, front – cut out of an amazon.de product photo, background removed | [MK4.0-Remote.md](../MK4.0-Remote.md), [main README](../../README.md) |
+
 ## Frame diagrams (SVG)
 
 Each diagram shows one telegram as BLE advertising packet next to the resulting XN297L frame (Android).
