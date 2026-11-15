@@ -1,7 +1,7 @@
 # CaDA CJV8011 / CJV1010 – Capture plan for the 2.4 GHz radio link
 
 > Purpose: step-by-step measurement guide for the radio link between the [CJV8011](CJV8011.md) handset and the [CJV1010](CJV1010.md) receiver, mainly with the nRF52840 MDK USB dongle ([XN297L sniffer](../Tools/xn297l-sniffer/README.md) in raw mode, [nRF Sniffer for Bluetooth LE](../Tools/nrf-sniffer-ble/README.md)); SDR and logic analyzer as fallbacks.
-> Status: **in progress** – session 0: R0.3, R0.4 done (no XN297L frames, C2 answered); R0.1, R0.2 (BLE) deferred. Session 1: R1.0 … R1.6 done – **handset found** on 2446 / 2466 MHz, 1 Mbps, repeating 32-byte block after an `AA` preamble (section 6.1); next: session 2 with sync `AA 93 88 B0 CA`. Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
+> Status: **in progress** – session 0: R0.3, R0.4 done (no XN297L frames, C2 answered); R0.1, R0.2 (BLE) deferred. Session 1: R1.0 … R1.6 done – **handset found** on 2446 / 2466 MHz, 1 Mbps, repeating 32-byte block after an `AA` preamble (section 6.1); Session 2: R2.1 … R2.4 done – frame structure decoded: constant 512-bit header, then 64-bit codeword symbols (DSSS-like), operating channels 2406 / 2427 / 2446 / 2462 MHz, control state in symbol positions 14 … 17 (section 7.1); R2.5 … R2.7 done – complete frame (header + 30 symbols, 2440 chips), hopping order 2406 → 2427 → 2446 → 2462 MHz, cycle 33.6 ms (section 7.3); Session 4: R4.1 … R4.3 done – **telegram decoded**: 64-chip symbol = 4 bits, control state = two 4-bit direction masks (section 9.1). Next: session 3 (pairing, ID in positions 2 … 7). Results go to [CJV8011.md §2](CJV8011.md#2-radio-protocol).
 > Last updated: 2026-11-14 (raw mode of the console tool instead of the separate `raw.py` script)
 
 ## Contents
@@ -34,13 +34,13 @@ the radio layer.
 |---|---|---|
 | C1 | Is the handset a BLE device? | open (session 0, expected: no) |
 | C2 | Is it an XN297L-compatible frame (preamble `71 0F 55`) like Mould King / JIESTAR? | **answered: no** – no frame with valid CRC in R0.3 (handset only) and R0.4 (handset + receiver), promiscuous mode, all channels, `nrf1m` (2026-11-14) |
-| C3 | Frequency / frequencies, data rate, modulation | **partly:** 1 Mbps GFSK (received with `nrf1m` and `ble1m`, not with `nrf2m`); handset alone (receiver off) on **2446 and 2466 MHz** (R1.1 … R1.4) |
-| C4 | Preamble, sync word (length, value), frame structure: length field, payload length, trailer, CRC, bit order | **partly:** preamble `AA …` (≥ 4 bytes incl. the nRF preamble), followed by a 32-byte block that repeats without gap (section 6.1); frame boundaries, sync word and CRC open (session 2) |
+| C3 | Frequency / frequencies, data rate, modulation | **answered:** 1 Mbps (chip rate) GFSK; bind: **2446 and 2466 MHz**; operation: **2406, 2427, 2446, 2462 MHz** (R1.1 … R2.4) |
+| C4 | Preamble, sync word (length, value), frame structure: length field, payload length, trailer, CRC, bit order | **mostly:** preamble `AA …`, 512-bit header, `1101`, **30 symbols** of 64-bit codewords from a small codebook, `1001` (sections 7.1, 7.3); meaning of the symbols and the check open |
 | C5 | Pairing: how is the pairing mode entered, is there a bind channel / bind address, does the handset have a fixed ID, is the receiver bound to one handset afterwards? | open (session 3) |
-| C6 | Telegram layout: encoding of the 4 channels × 3 states, effect of the direction switches (handset-side or flag in the telegram) | open (session 4) |
-| C7 | Frequency hopping (channels, order, period) | **partly:** only 2446 / 2466 MHz seen with the receiver off; full channel set and order open (R2.1) |
+| C6 | Telegram layout: encoding of the 4 channels × 3 states, effect of the direction switches (handset-side or flag in the telegram) | **answered:** two 4-bit masks (A in position 14, B in 15; red 1, blue 2, black 4, yellow 8), check symbols 15 − A / 15 − B; reversal switches act in the handset (bit moves to the other mask) (R4.1 … R4.3) |
+| C7 | Frequency hopping (channels, order, period) | **answered:** bind 2446 / 2466 MHz, a frame every 29.6 ms per channel; operation **2406 → 2427 → 2446 → 2462 MHz**, frames 7.2 ms apart, 12.2 ms pause, cycle 33.6 ms (R2.7) |
 | C8 | Does the receiver transmit (acknowledge, telemetry)? | open (sessions 2, 3) |
-| C9 | Chip family (LT8900 / LT8910 class or other)? | open (sessions 2, 6) |
+| C9 | Chip family (LT8900 / LT8910 class or other)? | **hypothesis:** Cypress CYRF6936 / CYRF7936 class DSSS (64-chip codewords, 12 MHz crystal); LT8900 does not fit (section 7.1); confirm with session 6 |
 
 Writing convention as in the [SCM8 capture plan](../JieStar/SCM8-Capture-Plan.md): only measured
 values go into the result document, interpretations are marked as such.
@@ -120,9 +120,9 @@ Wi-Fi off for the session if possible (or at least keep it in the same state); k
 |---|---|---|---|---|---|
 | 0 Exclusions | handset on, receiver off | R0.1 … R0.4 | C1, C2 | 15 min | **partly** – R0.3, R0.4 done (no XN297L); R0.1, R0.2 (BLE) deferred, only needed if session 1 finds nothing |
 | 1 Find | handset on / off, receiver off and on | R1.0 … R1.8 | C3, C4, C7 | 45 min | **done** (R1.0 … R1.6) – transmitter found; R1.7, R1.8 replaced by R2.4 |
-| 2 Lock on | handset + receiver | R2.1 … R2.6 | C4, C7, C8, C9 | 45 min | open |
+| 2 Lock on | handset + receiver | R2.1 … R2.7 | C4, C7, C8, C9 | 45 min | **done** – R2.1 … R2.7 |
 | 3 Pairing | pairing sequences | R3.1 … R3.5 | C5, C8 | 30 min | open |
-| 4 Mapping | paired, motors on all ports | R4.1 … R4.4 | C6 | 30 min | open |
+| 4 Mapping | paired, motors on all ports | R4.1 … R4.4 | C6 | 30 min | **done** – R4.1 … R4.3; R4.4 not needed (no intermediate values: each symbol is a mask) |
 | 5 SDR | only if session 1 finds nothing | R5.1 … R5.3 | C3, C4 | 60 min | fallback |
 | 6 Logic analyzer | receiver board open | R6.1, R6.2 | C3, C4, C9 | 60 min | optional |
 
@@ -240,6 +240,116 @@ over the whole transmission and where it ends.
 
 The original table below is kept for the later steps of this session.
 
+### 7.1 Results R2.1 … R2.4 (2026-11-15)
+
+Raw mode, sync `AA 93 88 B0 CA`, `--raw-length 250` (255 bytes incl. sync, 2040 bits), `nrf1m`.
+
+| Run | State | Frames | Result |
+|---|---|---|---|
+| R2.1 | receiver off, sweep 0 … 83 | 27 | only **2446** (13) and **2466 MHz** (14), −58 … −73 dBm; all frames identical |
+| R2.2 | receiver off, 2446 MHz, controls operated | 1030 | all frames **identical**, one frame every **29.6 ms** |
+| R2.3 | receiver off, 2466 MHz, controls operated | 1019 | identical to R2.2, every 29.6 ms |
+| R2.4 | receiver on, paired, controls operated, sweep | 55 | the first 2 frames still bind frames on 2446 MHz, then **2406, 2427, 2446, 2462 MHz**, on each channel one frame every **33.6 ms**; 11 different frame contents |
+
+**Frame structure** (bit 0 = first bit after the `AA` preamble):
+
+| Bits | Content |
+|---|---|
+| 0 … 511 | header: K0 K1 K2 K0′ K0 K1 K2 K0′ (K0′ = K0 with the first bit inverted), constant in all frames |
+| 512 … 515 | 4 bits `1101`, constant |
+| 516 + 64·k | symbol k (k = 0 … 22 within the 2040 captured bits; the frame end is not yet captured) |
+
+Every symbol is one 64-bit codeword from a small codebook; all captured symbols match a codeword with
+0 … 1 bit errors. The codewords are pairwise 23 … 41 bits apart (nearly orthogonal) and not
+rotations or inversions of each other.
+
+| Symbol | 64-bit codeword (on air, MSB first) | Seen in |
+|---|---|---|
+| K0 | `93 88 B0 CA D0 19 F2 E6` | header, filler (most frequent) |
+| K1 | `B5 2B E1 01 83 8E E2 C9` | header; data positions 5 … 7 in operation; position 14 / 15 |
+| K2 | `A4 71 7A 73 02 5C 45 16` | header only |
+| K3 | `63 31 24 02 8D 10 5F 97` | positions 0, 8, 9 |
+| K4 | `81 C0 51 4D 66 CA 15 F8` | position 10 |
+| K5 | `C4 F3 03 04 A5 EC D5 5C` | position 11; position 14 / 15 |
+| K6 | `8A 27 C0 39 D2 C6 C8 44` | positions 18 … 21 |
+| K7 | `C5 3A D4 11 2D 89 E1 97` | positions 18 … 21; position 16 / 17 |
+| K8 | `A7 E0 31 71 41 0A 77 2C` | position 22 (bind), position 2 (operation); position 14 / 15 |
+| K9 | `A0 0C 1E D3 88 8E 90 2E` | positions 3, 4 (operation) |
+| K10 | `8C B0 A4 8A 7E 24 46 38` | position 16 / 17 |
+| K11 | `0B 18 AA 98 6C 33 02 DE` | position 22 (operation); position 16 / 17 |
+| K12 | `CC 18 FE 2A 95 64 52 52` | position 16 / 17 |
+| K13 | `A2 E1 F4 02 A4 2E F3 9A` | position 14 / 15 |
+| K14 | `93 03 5E 1B 43 95 C4 02` | position 16 / 17 |
+
+Symbol sequences (positions 0 … 22):
+
+```
+bind (R2.1 … R2.3, all 2076 frames):
+  K3 K0 K0 K0 K0 K0 K0 K0 K3 K3 K4 K5 K0 K0 K0  K0  K0  K0  K6 K7 K7 K6 K8
+operation (R2.4), positions 14 … 17 vary:
+  K3 K0 K8 K9 K9 K1 K1 K1 K3 K3 K4 K5 K0 K0 a   b   f(a) f(b) K7 K6 K6 K7 K11
+```
+
+- In operation, positions 2 … 7 change from K0 to `K8 K9 K9 K1 K1 K1` and the tail from
+  `K6 K7 K7 K6 K8` to `K7 K6 K6 K7 K11` – *interpretation:* receiver / handset ID or a mode flag.
+- Positions 14 and 15 carry the control state: values K0, K1, K5, K8, K13 seen.
+- Positions 16 and 17 repeat 14 and 15 with a fixed mapping: K0 → K10, K1 → K12, K5 → K11, K8 → K7,
+  K13 → K14 (every pair seen in both 14 → 16 and 15 → 17) – *interpretation:* a check or
+  complement symbol per data symbol.
+- *Interpretation (not verified):* the structure – 1 Mchip/s, a long `AA` preamble, a
+  start-of-packet code, data as 64-chip PN codewords, 12 MHz crystal – matches a DSSS transceiver
+  of the **Cypress CYRF6936 / CYRF7936** class (WirelessUSB, also used in Spektrum DSM2 / DSMX
+  handsets), which needs a 12 MHz crystal. The LT8900 hypothesis does not fit (no plain byte
+  payload). Session 6 (SPI on the receiver) or a readable chip marking would confirm it.
+
+### 7.2 Next runs
+
+| Run | State | Settings | Duration | Goal |
+|---|---|---|---|---|
+| R2.5 | receiver on, paired, controls neutral | `$RAW --sync C53AD4112D --raw-length 250 --channels 46 --dwell 0` (sync = codeword K7, positions 18 / 21) | 30 s | **frame end**: symbols after position 22, length / CRC |
+| R2.6 | receiver off (bind) | `$RAW --sync 8A27C039D2 --raw-length 250 --channels 46 --dwell 0` (sync = codeword K6, positions 18 / 21 of the bind frame) | 30 s | end of the bind frame |
+| R2.7 | receiver on, paired | `$RAW --sync AA9388B0CA --raw-length 250 --channels 6,27,46,62 --dwell 9` | 1 min | hopping order (frames per channel in sequence) |
+
+Session 4 (mapping) can start right away with the R2.4 settings on one operating channel
+(`--channels 46 --dwell 0`), see section 9.
+
+### 7.3 Results R2.5 … R2.7 (2026-11-15)
+
+| Run | State | Sync | Frames | Result |
+|---|---|---|---|---|
+| R2.5 | paired, controls neutral, 2446 MHz | `C53AD4112D` (K7) | 552 | positions 18 … 29 identical in all frames, then 4 bits `1001`, then noise → **frame end** |
+| R2.6 | bind, 2446 MHz | `8A27C039D2` (K6) | 566 | positions 18 … 29 identical in all frames, then `1001`, then noise |
+| R2.7 | paired, channels 2406 / 2427 / 2446 / 2462, 9 ms dwell | `AA9388B0CA` | 539 | hopping order and spacing |
+
+**Complete frame** (bit 0 = first bit after the `AA` preamble, 2440 chips ≈ 2.44 ms at 1 Mchip/s):
+
+| Bits | Content |
+|---|---|
+| 0 … 511 | header K0 K1 K2 K0′ K0 K1 K2 K0′ |
+| 512 … 515 | `1101` |
+| 516 … 2435 | **30 symbols** (positions 0 … 29) of 64 bits |
+| 2436 … 2439 | `1001` |
+
+Symbol sequences, all 30 positions:
+
+```
+pos       0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16   17   18 19 20 21 22  23 24 25 26  27 28 29
+bind      K3 K0 K0 K0 K0 K0 K0 K0 K3 K3 K4 K5 K0 K0 K0 K0 K0   K0   K6 K7 K7 K6 K8  K2 K0 K0 K13 K3 K7 K4
+operation K3 K0 K8 K9 K9 K1 K1 K1 K3 K3 K4 K5 K0 K0 a  b  f(a) f(b) K7 K6 K6 K7 K11 K6 K0 K0 K11 K6 K7 K0
+```
+
+(neutral controls: a = b = K0, f(K0) = K10.) Positions 23 … 29 differ between bind and operation
+as well – *interpretation:* together with positions 2 … 7 and 18 … 22 an ID / mode block and a
+check over the frame.
+
+**Hopping (R2.7):** order **2406 → 2427 → 2446 → 2462 MHz**, then again 2406. Frame starts about
+**7.2 ms** apart within the sequence (2406 → 2427 7.2 ms, 2427 → 2446 7.2 ms, 2446 → 2462 7.0 ms),
+then a pause of **12.2 ms** before the next 2406 frame; one cycle = **33.6 ms** (= the per-channel
+period of R2.4). *Interpretation:* the longer pause may be a receive slot for a receiver response
+(C8, not yet observed).
+
+
+
 Prerequisite: candidate sync word and channel(s) from session 1. Use the first 3 … 5 bytes of the
 sync word as nRF sync, a single channel first, then all found channels.
 
@@ -308,6 +418,61 @@ between; note the start time of every action.
 Expected answers: which bits / bytes carry the four channels and the three states (C6); whether
 the direction switches change the telegram (handset-side reversal) or set a separate flag; whether
 the levers are really only three-state on air.
+
+### 9.1 Results R4.1 … R4.3 (2026-11-15)
+
+Raw mode, sync `AA9388B0CA`, `--raw-length 250`, 2446 MHz, dwell 0, receiver paired. The frames
+were segmented by changes of symbol positions 14 … 17; all other positions stayed constant
+(operation values of section 7.3).
+
+| Run | Action (user log) | Positions 14 15 16 17 (values, see the codebook below) |
+|---|---|---|
+| R4.1 | neutral | `0 0 F F` |
+| R4.1 | red plus / minus | `0 1 F E` / `1 0 E F` |
+| R4.1 | blue plus / minus | `0 2 F D` / `2 0 D F` |
+| R4.1 | black plus / minus | `0 4 F B` / `4 0 B F` |
+| R4.1 | yellow plus / minus (reversal switch jammed in the reversed position) | `8 0 7 F` / `0 8 F 7` |
+| R4.2 | red + blue plus | `0 3 F C` |
+| R4.2 | red + blue minus | `3 0 C F` |
+| R4.2 | black plus + yellow minus | `0 C F 3` |
+| R4.2 | all four plus | `7 8 8 7` |
+| R4.3 | reversal red, all plus | `9 6 6 9` |
+| R4.3 | reversal blue, all plus | `A 5 5 A` |
+| R4.3 | reversal black, all plus | `C 3 3 C` |
+| R4.3 | reversal yellow, all plus | `0 F F 0` |
+
+Result: **each 64-chip symbol carries 4 bits**; the 16 codewords form the complete codebook below.
+Position 14 = mask A, position 15 = mask B (red 1, blue 2, black 4, yellow 8), positions 16 / 17 =
+15 − A / 15 − B in all 5057 operation frames (the 29 exceptions are the bind frames with `0 0`).
+
+- In R4.1 / R4.2 yellow "plus" set the A bit, opposite to the other channels. Cause: the
+  direction-reversal switch of yellow **jams** and was in the reversed position (user, 2026-11-15)
+  – yellow is not special, all four channels are encoded the same way.
+- R4.3 is consistent with R4.1 (red / blue / black "plus" = B, yellow "plus" = A): reversing a
+  channel moves its bit to the other mask; with the yellow switch reversed all four channels are in
+  mask B (`0 F`). The anchor for the values 5 / A and 6 / 9 is the black step, which reproduces the
+  values 3 and C of R4.2.
+- R4.2 "all four plus" (`7 8`) is the mirror image of R4.3 – the levers were probably all moved
+  in the other direction there.
+
+| Value | 64-bit codeword (on air, MSB first) | Earlier label |
+|---|---|---|
+| `0` | `93 88 B0 CA D0 19 F2 E6` | K0 |
+| `1` | `B5 2B E1 01 83 8E E2 C9` | K1 |
+| `2` | `A7 E0 31 71 41 0A 77 2C` | K8 |
+| `3` | `63 31 24 02 8D 10 5F 97` | K3 |
+| `4` | `C4 F3 03 04 A5 EC D5 5C` | K5 |
+| `5` | `A0 0C 1E D3 88 8E 90 2E` | K9 |
+| `6` | `8A 27 C0 39 D2 C6 C8 44` | K6 |
+| `7` | `93 03 5E 1B 43 95 C4 02` | K14 |
+| `8` | `A2 E1 F4 02 A4 2E F3 9A` | K13 |
+| `9` | `F0 20 76 4C A1 56 56 72` | new in R4.3 |
+| `A` | `81 C0 51 4D 66 CA 15 F8` | K4 |
+| `B` | `0B 18 AA 98 6C 33 02 DE` | K11 |
+| `C` | `A4 71 7A 73 02 5C 45 16` | K2 |
+| `D` | `C5 3A D4 11 2D 89 E1 97` | K7 |
+| `E` | `CC 18 FE 2A 95 64 52 52` | K12 |
+| `F` | `8C B0 A4 8A 7E 24 46 38` | K10 |
 
 ---
 
