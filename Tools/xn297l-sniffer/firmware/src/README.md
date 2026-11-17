@@ -6,6 +6,7 @@ All byte values are in **on-air order, MSB first**, the same notation as in
 
 | File | Content |
 |---|---|
-| `main.c` | USB CDC setup, line-based ASCII command parser (`help`, `info`, `sync`, `len`, `ch`, `dwell`, `rate`, `start`, `stop`), channel hopping, packet reports to the host, LEDs |
+| `main.c` | USB CDC setup, line-based ASCII command parser (`help`, `info`, `sync`, `len`, `ch`, `dwell`, `rate`, `start`, `stop`, `mode`), channel hopping, packet reports to the host, LEDs |
 | `radio.h` | API of the raw receiver: limits (sync word 3 … 5 bytes, up to 250 captured bytes), configuration and receive functions |
 | `radio.c` | raw receiver on top of the nRF52840 `RADIO` peripheral: maps the sync word to `BASE0`/`PREFIX0`, switches hardware CRC and whitening off, data rates `nrf1m` / `ble1m` / `nrf2m` |
+| `out.h`, `out.c` | text output to the host through a ring buffer drained with `uart_fifo_fill()`: producers never block on USB, a full ring drops whole lines (counted, reported as `I drop n=...`) |

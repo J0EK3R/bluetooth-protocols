@@ -17,4 +17,5 @@ project(xn297l_sniffer)
 target_sources(app PRIVATE
     src/main.c      # command parser, main loop, USB CDC output
     src/radio.c     # raw RADIO configuration and packet reception
+    src/out.c       # ring buffered text output to the USB CDC port
 )

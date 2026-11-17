@@ -148,6 +148,7 @@ port is open (DTR set). Any terminal program can be used.
 | `dwell <ms>` | time per channel, `0` = stay on the first one | `300` |
 | `rate <r>` | `nrf1m`, `ble1m` (1 Mbps, BLE deviation), `nrf2m` | `nrf1m` |
 | `start` / `stop` | start / stop the receiver | stopped |
+| `mode <m>` | receiver backend, stops the receiver; currently only `xn297l` (firmware 1.2) | `xn297l` |
 | `info` / `help` | show configuration / commands | |
 
 Answers: `OK`, `E <error>`, `I <info>` and for every frame
@@ -156,6 +157,10 @@ Answers: `OK`, `E <error>`, `I <info>` and for every frame
 P <device time µs> <channel> <RSSI dBm> <sync word + captured bytes as hex>
 P 1256623 2 -55 2675882844 09AD4A0CAF8D7A58...
 ```
+
+Since firmware 1.2 the output is queued in a ring buffer and never blocks the receiver; if the host
+reads too slowly, reports are dropped and announced with `I drop n=<count>` (hosts ignore unknown
+`I` lines). `info` additionally shows `mode=xn297l`.
 
 The XN297L 250 kbps mode is not supported (the nRF52840 has no 250 kbps proprietary mode).
 

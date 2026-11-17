@@ -18,6 +18,9 @@
  *   rate <r>             nrf1m (default) | ble1m | nrf2m
  *   start                start receiving
  *   stop                 stop receiving
+ *   mode <m>             select the receiver backend; "xn297l" (the only one and
+ *                        the default after boot) - prepares further backends,
+ *                        stops the receiver
  *
  * Responses (dongle -> host)
  * --------------------------
@@ -28,6 +31,9 @@
  *                        received packet: device time in microseconds,
  *                        RF channel, RSSI in dBm, sync word + captured bytes
  *                        as hex (on-air order, MSB first)
+ *   I drop n=<count>     reports lost because the USB link was too slow
+ *
+ * Output goes through a ring buffer (out.c) and never blocks the receiver.
  *
  * Data is only sent while the host has the port open (DTR asserted).
  *
@@ -44,9 +50,10 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 
+#include "out.h"
 #include "radio.h"
 
-#define FW_VERSION "1.1.0"
+#define FW_VERSION "1.2.0"
 
 /* ------------------------------------------------------------------------ */
 /* Devices                                                                   */
@@ -80,6 +87,16 @@ static struct radio_config cfg = {
 	.rate = RADIO_RATE_NRF_1M,
 };
 
+/*
+ * Receiver backends selectable with the "mode" command. Every backend is
+ * started, stopped and polled through the same small interface, so further
+ * backends can be added without touching the command loop.
+ */
+enum backend_mode {
+	MODE_XN297L = 0,            /* raw XN297L / generic GFSK receiver (radio.c) */
+};
+
+static enum backend_mode mode = MODE_XN297L;   /* boots as XN297L sniffer (compatible) */
 static bool running;            /* receiver active                      */
 static bool host_connected;     /* DTR asserted by the host             */
 static int64_t green_off_ms;    /* time to switch the packet LED off    */
@@ -87,59 +104,6 @@ static int64_t green_off_ms;    /* time to switch the packet LED off    */
 /* Command line buffer */
 static char line[128];
 static size_t line_len;
-
-/* ------------------------------------------------------------------------ */
-/* Output helpers (no printf: keeps the image small and the output exact)    */
-/* ------------------------------------------------------------------------ */
-
-/* Send a string to the host (dropped if no host has the port open). */
-static void out_str(const char *s)
-{
-	if (!host_connected) {
-		return;
-	}
-	while (*s != '\0') {
-		uart_poll_out(cdc_dev, (unsigned char)*s++);
-	}
-}
-
-/* Send an unsigned decimal number. */
-static void out_u32(uint32_t v)
-{
-	char buf[11];
-	int i = (int)sizeof(buf) - 1;
-
-	buf[i] = '\0';
-	do {
-		buf[--i] = (char)('0' + (v % 10u));
-		v /= 10u;
-	} while (v != 0u && i > 0);
-	out_str(&buf[i]);
-}
-
-/* Send a signed decimal number. */
-static void out_i32(int32_t v)
-{
-	if (v < 0) {
-		out_str("-");
-		out_u32((uint32_t)(-v));
-	} else {
-		out_u32((uint32_t)v);
-	}
-}
-
-/* Send bytes as upper case hex without separators. */
-static void out_hex(const uint8_t *data, size_t len)
-{
-	static const char digits[] = "0123456789ABCDEF";
-	char pair[3] = { 0, 0, 0 };
-
-	for (size_t i = 0; i < len; i++) {
-		pair[0] = digits[data[i] >> 4];
-		pair[1] = digits[data[i] & 0x0Fu];
-		out_str(pair);
-	}
-}
 
 /* ------------------------------------------------------------------------ */
 /* Parsing helpers                                                           */
@@ -246,7 +210,8 @@ static void print_info(void)
 	out_u32(cfg.dwell_ms);
 	out_str(" rate=");
 	out_str(rate_name(cfg.rate));
-	out_str(running ? " state=running\n" : " state=stopped\n");
+	out_str(running ? " state=running" : " state=stopped");
+	out_str(" mode=xn297l\n");
 }
 
 /* Update the status LEDs: blue = running, red = stopped. */
@@ -256,11 +221,23 @@ static void update_state_leds(void)
 	gpio_pin_set_dt(&led_red, running ? 0 : 1);
 }
 
+/* Start the receiver of the selected backend. */
+static void backend_start(void)
+{
+	radio_start(&cfg);
+}
+
+/* Stop the receiver of the selected backend. */
+static void backend_stop(void)
+{
+	radio_stop();
+}
+
 /* Restart the receiver with the new configuration if it is running. */
 static void apply_config(void)
 {
 	if (running) {
-		radio_start(&cfg);
+		backend_start();
 	}
 }
 
@@ -285,7 +262,7 @@ static void handle_command(char *cmd)
 
 	if (strcmp(cmd, "help") == 0) {
 		out_str("I commands: help info start stop sync <hex> len <n> "
-			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m>\n");
+			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m> mode <xn297l>\n");
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "info") == 0) {
@@ -294,13 +271,13 @@ static void handle_command(char *cmd)
 
 	} else if (strcmp(cmd, "start") == 0) {
 		running = true;
-		radio_start(&cfg);
+		backend_start();
 		update_state_leds();
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "stop") == 0) {
 		running = false;
-		radio_stop();
+		backend_stop();
 		update_state_leds();
 		out_str("OK\n");
 
@@ -395,6 +372,20 @@ static void handle_command(char *cmd)
 		apply_config();
 		out_str("OK\n");
 
+	} else if (strcmp(cmd, "mode") == 0) {
+		if (strcmp(arg, "xn297l") != 0) {
+			out_str("E mode must be xn297l\n");
+			return;
+		}
+		/* Switching the backend stops the receiver; "start" starts the new one */
+		if (running) {
+			backend_stop();
+			running = false;
+		}
+		mode = MODE_XN297L;
+		update_state_leds();
+		out_str("OK\n");
+
 	} else {
 		out_str("E unknown command (try 'help')\n");
 	}
@@ -434,12 +425,17 @@ static void poll_dtr(void)
 	if (dtr != 0u && !host_connected) {
 		host_connected = true;
 		line_len = 0;
+		out_enable(true);
 		out_str("I XN297L sniffer ready\n");
 		print_info();
 	} else if (dtr == 0u && host_connected) {
 		host_connected = false;
+		out_enable(false);
 	}
 }
+
+/* Longest report line: "P ..." with 250 captured bytes = about 540 characters. */
+#define REPORT_LINE_MAX 640u
 
 /* Send one packet report line. */
 static void report_packet(const struct radio_packet *pkt)
@@ -454,6 +450,18 @@ static void report_packet(const struct radio_packet *pkt)
 	out_hex(cfg.sync, cfg.sync_len);   /* sync word first ...           */
 	out_hex(pkt->data, pkt->len);      /* ... then the captured bytes   */
 	out_str("\n");
+}
+
+/* Tell the host about reports dropped because the USB link was too slow. */
+static void report_drops(void)
+{
+	uint32_t lost = out_take_drops();
+
+	if (lost != 0u && out_reserve(REPORT_LINE_MAX)) {
+		out_str("I drop n=");
+		out_u32(lost);
+		out_str("\n");
+	}
 }
 
 /* ------------------------------------------------------------------------ */
@@ -481,6 +489,7 @@ int main(void)
 	}
 
 	/* USB CDC ACM */
+	out_init(cdc_dev);
 	if (!device_is_ready(cdc_dev) || usb_enable(NULL) != 0) {
 		for (;;) {
 			gpio_pin_toggle_dt(&led_red);
@@ -500,10 +509,19 @@ int main(void)
 
 		/* Received packets (drain everything that is available) */
 		while (radio_poll(&pkt)) {
-			report_packet(&pkt);
+			/* never block on a slow host: drop the report if the output ring is full */
+			if (out_reserve(REPORT_LINE_MAX)) {
+				report_packet(&pkt);
+			} else {
+				out_note_drop();
+			}
 			gpio_pin_set_dt(&led_green, 1);
 			green_off_ms = k_uptime_get() + 20;
 		}
+
+		/* Hand queued output to the USB stack; report losses to the host */
+		out_flush();
+		report_drops();
 
 		/* Packet LED: short green flash */
 		if (green_off_ms != 0 && k_uptime_get() >= green_off_ms) {

@@ -6,10 +6,11 @@ Unit tests for the XN297L decoder. Back to the tool: [../README.md](../README.md
 |---|---|
 | `test_decoder.py` | tests the decoder of the [Python extcap](../extcap/README.md) and of the [Lua dissector](../wireshark/README.md) against reference frames built by an independent encoder (BLE-domain formulation: LSB-first bytes, BLE whitening LFSR), plus the raw mode of the extcap (configuration commands, output format, pseudo header flag) |
 
-Run:
+Run all tests (standard library only, no pyserial needed):
 
 ```bash
-python tests/test_decoder.py
+cd Tools/xn297l-sniffer/tests && python3 -m unittest          # or: python3 -m unittest discover -s tests
+python tests/test_decoder.py                                    # a single file
 ```
 
 The Lua tests run only if the `lupa` package is installed (`pip install lupa`).
