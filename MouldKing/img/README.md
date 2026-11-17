@@ -22,6 +22,17 @@ Taken from [BrickController2](https://github.com/J0EK3R/brickcontroller2) (`Bric
 |---|---|---|
 | `mk4_remote_front.png` | MK4.0 original handset, front – cut out of an amazon.de product photo, background removed | [MK4.0-Remote.md](../MK4.0-Remote.md), [main README](../../README.md) |
 
+## Product photos of the DIY module (PNG)
+
+Own photos of the Mould King DIY module, cropped, scaled down, metadata removed, background removed.
+
+| File | Content | Used in |
+|---|---|---|
+| `mkdiy_housing_perspective.png` | DIY module housing, angled view | [MK-DIY.md](../MK-DIY.md), [main README](../../README.md) |
+| `mkdiy_battery.png` | LiPo battery pack ZN 802540, 7.4 V 600 mAh | [MK-DIY.md](../MK-DIY.md) |
+| `mkdiy_board_front.png` | board HF-DL4.0RX, front | [MK-DIY.md](../MK-DIY.md) |
+| `mkdiy_board_back.png` | board HF-DL4.0RX, back, in the housing part | [MK-DIY.md](../MK-DIY.md) |
+
 ## Frame diagrams (SVG)
 
 Each diagram shows one telegram as BLE advertising packet next to the resulting XN297L frame (Android).
@@ -64,6 +75,8 @@ Own photos of the repository author (cropped, scaled down, metadata removed).
 | `mk4_chip_cc1130t.jpg` | close-up of the SOP-16 marked CC1130T | [MK4.0.md](../MK4.0.md) |
 | `mk6_housing_top.jpg` | MK6.0 module, top view through the transparent lid | [MK6.0.md](../MK6.0.md) |
 | `mk6_housing_perspective.jpg` | MK6.0 module, angled view | [MK6.0.md](../MK6.0.md) |
+| `mkdiy_board_mcu.jpg` | DIY board, close-up of the upper part with the JieLi MCU, crystal and antenna | [MK-DIY.md](../MK-DIY.md) |
+| `mkdiy_board_power.jpg` | DIY board, close-up of the lower part with Micro-USB, inductor, Schottky diodes | [MK-DIY.md](../MK-DIY.md) |
 
 ## Set images (PNG)
 

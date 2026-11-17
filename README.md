@@ -11,7 +11,7 @@ Two kinds of protocols are covered:
 
 All documents are written in Markdown and in English. Protocol details are derived from the BrickController2 source code and unit tests, datasheets and own analysis; derived (not documented) interpretations are marked as such in the documents.
 
-All devices described here except the Mould King **MKH4.0** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which the **MK4.0 evaluates (verified by own test)** and the **MK6.0 reportedly evaluates** ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)): after power-on the receiver latches the app identifier of the first Connect telegram and then reacts only to Command telegrams with that identifier (no real pairing, see [MK4.0 §4](MouldKing/MK4.0.md#4-app-identifier)). For the other Mould King, JIESTAR and PowerBox modules this is not verified. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
+All devices described here except the Mould King **MKH4.0** and the **DIY module** are controlled via BLE advertising (the MK4.0 handset is the radio source, not a controlled device); the MKH4.0 uses a GATT connection with an ASCII command protocol and the DIY module a GATT connection with a binary command frame. The Mould King, JIESTAR and PowerBox telegrams contain a 2-byte app identifier, which the **MK4.0 evaluates (verified by own test)** and the **MK6.0 reportedly evaluates** ([discussion #6](https://github.com/J0EK3R/bluetooth-protocols/discussions/6)): after power-on the receiver latches the app identifier of the first Connect telegram and then reacts only to Command telegrams with that identifier (no real pairing, see [MK4.0 §4](MouldKing/MK4.0.md#4-app-identifier)). For the other Mould King, JIESTAR and PowerBox modules this is not verified. The **CaDA** RaceCar is the exception: it is paired with the app identifier during discovery.
 
 ## Contents
 
@@ -35,6 +35,12 @@ The MKH4.0 hub is a real BLE peripheral and is controlled via a **GATT connectio
 | Image | Document | Device | Channels | Transport / commands |
 |---|---|---|---|---|
 | <img src="MouldKing/img/mkh4_image.png" alt="" height="48"> | [MouldKing/MKH4.0.md](MouldKing/MKH4.0.md) | MKH4.0 hub | 4 ports, normal motor (speed) or servo (absolute position, encoder motor) | GATT service `0xAE3A` (write `0xAE3B`, notify `0xAE3C`), ASCII messages `T…W`, all known commands listed |
+
+The Mould King DIY module is also a real BLE peripheral (GATT, same service `0xAE3A` as the MKH4.0) with a binary command frame:
+
+| Image | Document | Device | Channels | Transport / commands |
+|---|---|---|---|---|
+| <img src="MouldKing/img/mkdiy_housing_perspective.png" alt="" height="48"> | [MouldKing/MK-DIY.md](MouldKing/MK-DIY.md) | DIY module (board HF-DL4.0RX, JieLi AC6965E) | 4 motor ports (speed byte each) | GATT service `0xAE3A` (write `0xAE3B`, notify `0xAE3C`), 18-byte frame `CC AA BB 01 … cs 33`; manufacturer ID `0xAC33` |
 
 ### JIESTAR
 
@@ -117,6 +123,7 @@ Same radio layer as Mould King, manufacturer ID `0xFF00`.
     ├── MK5.0.md
     ├── MK6.0.md
     ├── MKH4.0.md
+    ├── MK-DIY.md
     └── img/            # device images (PNG), board photos (JPEG) and SVG comparison tables (BLE packet vs. XN297L frame)
 ```
 
@@ -136,7 +143,7 @@ The set images in `MouldKing/img/mkh4_set_*.png` are product photos from the Mou
 
 The image `MouldKing/img/mk4_remote_front.png` is cut out of a product photo on the [amazon.de product page](https://www.amazon.de/Mould-King-wiederaufladbarer-Fernbedienung-programmierbar/dp/B09KY8LL3Y) (MK4.0 handset with receiver), © Mould King / seller, background removed and scaled down.
 
-The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` and the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg`, and the CaDA CJV1010 / CJV8011 photos `CaDA/img/cjv1010_{housing,board,chip}_*`, `CaDA/img/cjv1010_battery.png` and `CaDA/img/cjv8011_{housing,board,chip}_*` are own photos of the repository author (cropped, scaled down, metadata removed; free-standing objects with the background removed).
+The board photos `MouldKing/img/mk4_board_*.jpg` and `MouldKing/img/mk4_chip_*.jpg` the housing photos `MouldKing/img/mk4_housing_*.jpg` the MK6.0 housing photos `MouldKing/img/mk6_housing_*.jpg`, the Mould King DIY module photos `MouldKing/img/mkdiy_*`, and the CaDA CJV1010 / CJV8011 photos `CaDA/img/cjv1010_{housing,board,chip}_*`, `CaDA/img/cjv1010_battery.png` and `CaDA/img/cjv8011_{housing,board,chip}_*` are own photos of the repository author (cropped, scaled down, metadata removed; free-standing objects with the background removed).
 
 The product photos `CaDA/img/cjv1010_receiver_*.png` and `CaDA/img/cjv8011_remote_*.png` are taken from the klemmshop.de product pages ([CJV1010](https://www.klemmshop.de/CaDA-CJV1010-Klemmbaustein-4-Kanal-Empfaenger-/-Akkubox-24-GHz), [CJV8011](https://www.klemmshop.de/CaDA-CJV8011-Klemmbaustein-4-Kanal-Fernsteuerung-24-GHz_2?lang=eng)), © CaDA / klemmshop.de, scaled down to 400 × 400 px (background removed and cropped).
 

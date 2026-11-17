@@ -66,7 +66,7 @@ All UUIDs are 16-bit UUIDs on the Bluetooth base UUID (`0000xxxx-0000-1000-8000-
 | | `0xAE3C` | notify | **responses / notifications** hub → app |
 
 - The original app writes the CCCD of `0xAE3C` (enable notifications) right after service discovery. It does not enable notifications on `0xAE02` / `0xAE04` and never reads any `0xAE30` characteristic in the captured sessions.
-- Service `0xAE3A` / characteristic `0xAE3B` are also used by the Mould King **DIY** module, but with a different (binary) payload `CC AA BB 01 …`. The first BC2 draft of the MKH4 driver used that binary packet; it was replaced by the text protocol described here.
+- Service `0xAE3A` / characteristic `0xAE3B` are also used by the Mould King **DIY** module ([MK-DIY.md](MK-DIY.md)), but with a different (binary) payload `CC AA BB 01 …`. The first BC2 draft of the MKH4 driver used that binary packet; it was replaced by the text protocol described here.
 
 ---
 

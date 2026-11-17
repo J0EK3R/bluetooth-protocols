@@ -3,9 +3,9 @@
 Protocol descriptions of the Mould King receiver modules and of the original MK4.0 handset.
 Overview of all vendors: [../README.md](../README.md).
 
-All modules except the MKH4.0 are controlled via **BLE advertising**: the app sends telegrams that
-appear on air as XN297L frames (see [../Chips/XN297L.md](../Chips/XN297L.md)). The MKH4.0 hub is a
-real BLE peripheral and is controlled via a **GATT connection**.
+All modules except the MKH4.0 and the DIY module are controlled via **BLE advertising**: the app sends telegrams that
+appear on air as XN297L frames (see [../Chips/XN297L.md](../Chips/XN297L.md)). The MKH4.0 hub and the DIY module are
+real BLE peripherals and are controlled via a **GATT connection**.
 
 ## Contents
 
@@ -20,4 +20,5 @@ real BLE peripheral and is controlled via a **GATT connection**.
 | [MK5.0.md](MK5.0.md) | MK5.0 tank module – BLE advertising, same telegrams as MK4.0: drive, turret, shot, turn + turret lock |
 | [MK6.0.md](MK6.0.md) | MK6.0 module – BLE advertising, 6 analog channels (byte) × 3 devices, one telegram per device; housing photos |
 | [MKH4.0.md](MKH4.0.md) | MKH4.0 hub – GATT service `0xAE3A`, ASCII command protocol, 4 ports (motor or servo); list of Mould King sets using the hub |
+| [MK-DIY.md](MK-DIY.md) | Mould King DIY module – GATT service `0xAE3A`, binary 18-byte command frame with checksum, 4 motor ports; hardware: JieLi AC6965E MCU, 4 × SA8321 motor drivers, 2S LiPo; photos |
 | [img/](img/README.md) | device images, photos and SVG frame diagrams used by these documents |
