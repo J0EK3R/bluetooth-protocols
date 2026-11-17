@@ -404,8 +404,15 @@ static void handle_bfollow(const char *arg)
 		}
 		tmp.follow = true;
 	}
+	/* Re-selecting the same device must not restart the receiver (it would drop a followed connection) */
+	bool same = tmp.follow == ble_cfg.follow &&
+		    (!tmp.follow || (tmp.follow_type == ble_cfg.follow_type &&
+				     memcmp(tmp.follow_addr, ble_cfg.follow_addr, 6) == 0));
+
 	ble_cfg = tmp;
-	apply_config(MODE_BLE);
+	if (!same) {
+		apply_config(MODE_BLE);
+	}
 	out_str("OK\n");
 }
 
@@ -622,17 +629,25 @@ static void handle_command(char *cmd)
 		handle_bfollow(arg);
 
 	} else if (strcmp(cmd, "bconn") == 0) {
+		bool old = ble_cfg.follow_conn;
+
 		if (!parse_on_off(arg, "bconn", &ble_cfg.follow_conn)) {
 			return;
 		}
-		apply_config(MODE_BLE);
+		if (old != ble_cfg.follow_conn) {
+			apply_config(MODE_BLE);
+		}
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "brsp") == 0) {
+		bool old = ble_cfg.follow_rsp;
+
 		if (!parse_on_off(arg, "brsp", &ble_cfg.follow_rsp)) {
 			return;
 		}
-		apply_config(MODE_BLE);
+		if (old != ble_cfg.follow_rsp) {
+			apply_config(MODE_BLE);
+		}
 		out_str("OK\n");
 
 	} else {

@@ -264,10 +264,11 @@ class SupervisionTests(ScriptTestCase):
         self.assertEqual(out[-1], f"lost {model.LOST_TIMEOUT}")
 
     def test_bad_crc_packets_do_not_feed_the_supervision_timer(self):
-        script = self.connect(["next", "pkt 0 1005000 0100"])       # anchor with CRC error
+        # anchor with CRC error only: the 6 event establishment limit still applies
+        script = self.connect(["next", "pkt 0 1005000 0100"])
         script += ["next"] * 70
         out = self.run_script(script)
-        self.assertEqual(out[-1], f"lost {model.LOST_TIMEOUT}")
+        self.assertEqual(out[-1], f"lost {model.LOST_ESTABLISH}")
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +366,21 @@ class ControlPduTests(ScriptTestCase):
         script += ["next", "next", "info"]
         out = self.run_script(script)
         self.assertIn("int=24", out[-1])
+
+    def test_instant_boundary(self):
+        # announced in event 1: an instant 32766 events ahead is accepted, 32767 counts as passed.
+        # The pending update is observed by running events up to the instant (C and model compared).
+        for ahead, accepted in ((32766, True), (32767, False)):
+            instant = 1 + ahead
+            script = self.connect(["next", "pkt 1 1005000 0100", "pkt 1 1005230 0100", "next",
+                                   f"pkt 1 1035000 {conn_update(instant, interval=40)}",
+                                   "pkt 1 1035230 0100"])
+            t = 1035000
+            for _ in range(2, instant + 1):             # events 2 .. instant, on schedule
+                t += 30000
+                script += ["next", f"pkt 1 {t} 0100", f"pkt 1 {t + 230} 0100"]
+            script += ["info"]
+            self.assertIn("int=40" if accepted else "int=24", self.run_script(script)[-1], ahead)
 
     def test_update_from_slave_is_ignored(self):
         # slave packets are the odd ones: put the update PDU into the slave's slot

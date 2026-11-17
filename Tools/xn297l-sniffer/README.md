@@ -446,8 +446,9 @@ The PHY is not representable in the record except for the PHY bits of the flags 
 - Connection following: LE 1M PHY only (no LL_PHY_UPDATE_IND to 2M / Coded, no AUX_CONNECT_REQ, legacy
   CONNECT_IND only), the connection must start while the sniffer follows the device. The window widening
   assumes the master's worst case clock accuracy from the CONNECT_IND (SCA) plus 50 ppm for the sniffer.
-- The first packet of a connection event is taken as the master packet. If the master packet is missed and
-  only the slave answer is heard, directions of this event are swapped (the *gap* flag helps to spot that).
+- Direction is derived from the position of the packet in the event (first = master). If the master packet of an
+  event is missed and only the slave answer is heard, it is labelled M->S (and the *gap* flag is not set for it);
+  this cannot be fixed without SN/NESN tracking.
 - Encrypted connections: LL_ENC_REQ / ENC_RSP / START_ENC_REQ are seen in clear, afterwards LL control PDUs
   cannot be read. The sniffer keeps following with the parameters it knows; if a connection update or channel
   map update is sent while encrypted, it cannot learn the instant and the connection is lost (supervision

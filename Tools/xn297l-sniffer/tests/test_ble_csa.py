@@ -5,15 +5,13 @@ Tests of the channel selection algorithms #1 and #2.
 Test vectors: Bluetooth Core Specification Vol 6 Part C 3 ("Channel selection
 algorithm #2 sample data"): access address 0x8E89BED6, channel identifier
 0x305F.
-  Sample 1 (all 37 channels used): event counter 0, 1, 2 -> prn_e 56857, 1685,
-           38301 -> channels 25, 20, 6.
+  Sample 1 (all 37 channels used): event counter 0, 1, 2, 3 -> prn_e 56857, 1685,
+           38301, 27475 -> channels 25, 20, 6, 21.
   Sample 2 (9 used channels 9,10,21,22,23,33,34,35,36): event counter 6, 7, 8 ->
            prn_e 10975, 5490, 46970 -> channels 23, 9, 34.
-The values were written down from the specification text by the developer
-(no network access to the PDF when this was written). They are confirmed by an
-independent argument: the algorithm implemented exactly as specified
-reproduces these 16 bit pseudo random numbers; a wrong algorithm would not hit
-them by chance. Cross-checking them against the PDF is still recommended.
+The values were verified independently by the reviewer (separate
+re-implementation from the specification); the algorithm reproduces these 16
+bit pseudo random numbers exactly.
 Algorithm #1 has no sample data in the specification; it is tested with hand
 calculated sequences and properties.
 
@@ -43,7 +41,7 @@ class Csa2SpecVectors(unittest.TestCase):
         self.assertEqual(csa.csa2_channel_id(SPEC_AA), 0x305F)
 
     def test_sample1_all_channels(self):
-        for counter, prn_e, channel in ((0, 56857, 25), (1, 1685, 20), (2, 38301, 6)):
+        for counter, prn_e, channel in ((0, 56857, 25), (1, 1685, 20), (2, 38301, 6), (3, 27475, 21)):
             self.assertEqual(csa.csa2_prn_e(0x305F, counter), prn_e)
             self.assertEqual(csa.csa2_channel(0x305F, counter, FULL_MAP), channel)
 

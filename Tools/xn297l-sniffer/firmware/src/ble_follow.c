@@ -297,7 +297,7 @@ static void handle_control(struct ble_follow *f, bool from_master, const uint8_t
 {
 	struct ble_conn_update upd;
 	struct ble_chmap_update map;
-	/* the instant must be ahead of the current event (1 .. 32767 events) */
+	/* the instant must be ahead of the current event (1 .. 32766 events; >= 32767 counts as passed) */
 	uint16_t ahead;
 
 	if (len == 0u) {
@@ -307,7 +307,7 @@ static void handle_control(struct ble_follow *f, bool from_master, const uint8_t
 	case BLE_LL_CONNECTION_UPDATE_IND:
 		if (from_master && ble_pdu_parse_conn_update(payload, len, &upd)) {
 			ahead = (uint16_t)(upd.instant - f->counter);
-			if (ahead != 0u && ahead < 0x8000u &&
+			if (ahead != 0u && ahead < 0x7FFFu &&
 			    upd.interval >= INTERVAL_MIN && upd.interval <= INTERVAL_MAX) {
 				f->upd = upd;               /* a retransmission just rewrites the same data */
 				f->upd_pending = true;
@@ -317,7 +317,7 @@ static void handle_control(struct ble_follow *f, bool from_master, const uint8_t
 	case BLE_LL_CHANNEL_MAP_IND:
 		if (from_master && ble_pdu_parse_chmap_update(payload, len, &map)) {
 			ahead = (uint16_t)(map.instant - f->counter);
-			if (ahead != 0u && ahead < 0x8000u && ble_csa_count_used(map.chmap) >= 2u) {
+			if (ahead != 0u && ahead < 0x7FFFu && ble_csa_count_used(map.chmap) >= 2u) {
 				f->map = map;
 				f->map_pending = true;
 			}
@@ -355,7 +355,8 @@ void ble_follow_on_data_packet(struct ble_follow *f, const uint8_t *pdu, size_t 
 		f->ref_counter = f->counter;
 		f->win_us = 0;
 		f->sync_us = start_us;
-		f->anchored = true;
+		/* only a packet with valid CRC ends the establishment phase (6 event limit) */
+		f->anchored = f->anchored || crc_ok;
 	} else {
 		/* Packets inside an event follow each other after T_IFS */
 		int32_t gap = (int32_t)(start_us - f->prev_end_us) - (int32_t)BLE_TIFS_US;

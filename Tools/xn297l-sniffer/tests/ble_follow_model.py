@@ -235,13 +235,13 @@ class FollowModel:
             upd = ble_pdu.parse_conn_update(payload) if from_master else None
             if upd is not None:
                 ahead = (upd["instant"] - self.counter) & M16
-                if 0 < ahead < 0x8000 and INTERVAL_MIN <= upd["interval"] <= INTERVAL_MAX:
+                if 0 < ahead < 0x7FFF and INTERVAL_MIN <= upd["interval"] <= INTERVAL_MAX:
                     self.upd = upd
         elif opcode == ble_pdu.LL_CHANNEL_MAP_IND:
             cmu = ble_pdu.parse_chmap_update(payload) if from_master else None
             if cmu is not None:
                 ahead = (cmu["instant"] - self.counter) & M16
-                if 0 < ahead < 0x8000 and len(csa.used_channels(cmu["chmap"])) >= 2:
+                if 0 < ahead < 0x7FFF and len(csa.used_channels(cmu["chmap"])) >= 2:
                     self.map = cmu
         elif opcode == ble_pdu.LL_TERMINATE_IND:
             if len(payload) == 2:
@@ -262,7 +262,7 @@ class FollowModel:
             self.ref_counter = self.counter
             self.win_us = 0
             self.sync_us = start_us
-            self.anchored = True
+            self.anchored = self.anchored or crc_ok
         else:
             gap = ((start_us - self.prev_end_us) & M32)
             gap = gap - (1 << 32) if gap >= 1 << 31 else gap
