@@ -63,5 +63,8 @@ export PATH=$ZEP/zephyr-sdk-0.16.8/hosttools/sysroots/x86_64-pokysdk-linux/usr/b
 west build -b nrf52840_mdk_usb_dongle -p always -d /tmp/xn297l-build path/to/Tools/xn297l-sniffer/firmware
 ```
 
+For repeated use put `$ZEP` in a persistent location (e.g. `~/tools/zephyr`) and save the "every new shell"
+exports (with `ZEP` derived from the script's own directory) as an `env.sh` there; later builds then only need `. env.sh`.
+
 `cmake` 4.x is too new for Zephyr 3.7 (hence `cmake<4`). The unchanged 1.1.0 sources built with this
 setup are byte-identical to `prebuilt/xn297l_sniffer_nrf52840_mdk_usb_dongle.uf2`, i.e. the build is reproducible.
