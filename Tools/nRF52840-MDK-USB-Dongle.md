@@ -5,7 +5,7 @@
 > Last updated: 2026-11-15
 
 <table>
-<tr><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle.jpg" alt="nRF52840 MDK USB Dongle with case and packaging" width="214"></td><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle_label.jpg" alt="Back side of the case: nRF52840 MDK USB Dongle, model MDK52840-UD, DC 5V 500mA" width="558"></td></tr>
+<tr><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle.jpg" alt="nRF52840 MDK USB Dongle with case and packaging" width="295"></td><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle_label.jpg" alt="Back side of the case: nRF52840 MDK USB Dongle, model MDK52840-UD, DC 5V 500mA" width="477"></td></tr>
 </table>
 
 *Images: product photos from the amazon.de product page, scaled down; see "Image credits" in the

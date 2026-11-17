@@ -398,11 +398,11 @@ sticks A … D, buttons E … H.
 ### 8.2 Board
 
 <table>
-<tr><td align="center" valign="top"><img src="img/scm8_board_front.png" alt="Front (component side) of the SCM8 board HF-JX021RX" width="139"></td><td align="center" valign="top"><img src="img/scm8_board_back.png" alt="Back of the SCM8 board in the housing part" width="641"></td></tr>
-<tr><td align="center" valign="top" colspan="2"><img src="img/scm8_board_back_battery.png" alt="Back of the board with the battery in the housing part" width="593"></td></tr>
+<tr><td align="center" valign="middle" rowspan="2"><img src="img/scm8_board_front.png" alt="Front (component side) of the SCM8 board HF-JX021RX" width="280"></td><td align="center" valign="top"><img src="img/scm8_board_back.png" alt="Back of the SCM8 board in the housing part" width="500"></td></tr>
+<tr><td align="center" valign="top"><img src="img/scm8_board_back_battery.png" alt="Back of the board with the battery in the housing part" width="500"></td></tr>
 </table>
 
-*Top left: front (component side, silkscreen date `2024/8/11`). Top right: back in the case. Bottom: back with the battery inserted. Own photos.*
+*Left: front (component side, silkscreen date `2024/8/11`). Right top: back in the case. Right bottom: back with the battery inserted. Own photos.*
 
 | Property | Value |
 |---|---|

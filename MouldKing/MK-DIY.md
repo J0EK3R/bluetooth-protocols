@@ -5,7 +5,7 @@
 > No public description of the DIY protocol was found; everything in section 2 comes from BrickController2 (BC2). Items marked *likely* or *unverified* are inferences.
 
 <table>
-<tr><td align="center" valign="top"><img src="img/mkdiy_housing_perspective.png" alt="Mould King DIY module, housing at an angle" width="283"></td><td align="center" valign="top"><img src="img/mkdiy_board_front.png" alt="Mould King DIY module, board front" width="123"></td></tr>
+<tr><td align="center" valign="top"><img src="img/mkdiy_housing_perspective.png" alt="Mould King DIY module, housing at an angle" width="245"></td><td align="center" valign="top"><img src="img/mkdiy_board_front.png" alt="Mould King DIY module, board front" width="161"></td></tr>
 </table>
 
 *Own photos (cropped, background removed); see "Image credits" in the [main README](../README.md#image-credits).*
