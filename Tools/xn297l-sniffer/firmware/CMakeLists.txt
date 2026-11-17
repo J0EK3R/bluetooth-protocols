@@ -17,6 +17,9 @@ project(xn297l_sniffer)
 target_sources(app PRIVATE
     src/main.c      # command parser, main loop, USB CDC output
     src/radio.c     # raw RADIO configuration and packet reception (XN297L backend)
-    src/ble_radio.c # Bluetooth LE receiver (BLE backend)
+    src/ble_radio.c # Bluetooth LE receiver: RADIO, TIMER, PPI, interrupts (BLE backend)
+    src/ble_follow.c # connection following logic (pure C, host testable)
+    src/ble_pdu.c   # CONNECT_IND / LL control PDU parsing (pure C)
+    src/ble_csa.c   # channel selection algorithms #1 and #2 (pure C)
     src/out.c       # ring buffered text output to the USB CDC port
 )

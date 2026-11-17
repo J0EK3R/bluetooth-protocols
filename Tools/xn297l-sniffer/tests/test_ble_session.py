@@ -304,7 +304,8 @@ class ExtcapOutputTests(unittest.TestCase):
             if m:
                 numbers[int(m.group(1))] = m.group(2)
         self.assertEqual(numbers, {100: "--port", 101: "--only-advertising", 102: "--adv-hop",
-                                   103: "--rssi-filter", 104: "--adv-dwell"})
+                                   103: "--rssi-filter", 104: "--adv-dwell",
+                                   105: "--scan-follow-rsp", 106: "--follow"})
         self.assertTrue(all(n >= 100 for n in numbers))
 
     def test_ble_toolbar_controls(self):
@@ -351,7 +352,8 @@ class ConfigureBleTests(unittest.TestCase):
         dongle = RecordingDongle()
         params = xs.configure_ble(dongle, ble_args())
         self.assertEqual(dongle.commands, ["stop", "mode ble", "bch 37,38,39", "bdwell 300",
-                                           "brssi -127", "badv off", "start"])
+                                           "brssi -127", "badv off", "brsp off", "bfollow off",
+                                           "start"])
         self.assertEqual(params["channels"], [37, 38, 39])
 
     def test_custom_options(self):
@@ -371,7 +373,7 @@ class ConfigureBleTests(unittest.TestCase):
     def test_old_firmware_gives_clear_error(self):
         with self.assertRaises(RuntimeError) as ctx:
             xs.configure_ble(RecordingDongle(reject=("mode ble",)), ble_args())
-        self.assertIn("firmware 2.0.0", str(ctx.exception))
+        self.assertIn("firmware 2.1.0", str(ctx.exception))
 
     def test_xn297l_configure_unchanged(self):
         args = xs.build_parser().parse_args(["--print", "--port", "X", "--mode", "raw"])
@@ -500,16 +502,17 @@ class ToolbarHandlerTests(unittest.TestCase):
     def test_device_selection_is_remembered(self):
         replies = self.set_msg(xs.CTRL_DEVICE, "11:22:33:44:55:66,1")
         self.assertEqual(self.handler.follow, "11:22:33:44:55:66,1")
-        self.assertIn("not supported", replies[0][2])
+        self.assertIn("Following 11:22:33:44:55:66", replies[0][2])
         self.set_msg(xs.CTRL_DEVICE, "all")
         self.assertEqual(self.handler.follow, "all")
-        self.assertEqual(self.dongle.commands, [])          # following needs a later firmware
+        # the address is sent without colons, with its address type; "all" switches following off
+        self.assertEqual(self.dongle.commands, ["bfollow 112233445566,1", "bfollow off"])
 
     def test_defaults_button_restores_everything(self):
         self.set_msg(xs.CTRL_RSSI, "-60")
         self.dongle.commands.clear()
         replies = self.set_msg(xs.CTRL_DEFAULTS, "")
-        self.assertEqual(self.dongle.commands, ["bch 37,38,39", "brssi -127"])
+        self.assertEqual(self.dongle.commands, ["bch 37,38,39", "brssi -127", "bfollow off"])
         self.assertEqual(self.session.rssi_min, -127)
         sets = {(c, p) for c, cmd, p in replies if cmd == ble_control.CMD_SET}
         self.assertEqual(sets, {(xs.CTRL_ADV_HOP, "37,38,39"), (xs.CTRL_RSSI, "-127"),
@@ -651,7 +654,7 @@ class EndToEndTests(unittest.TestCase):
                     xs.run_capture_ble(args)
         finally:
             xs.Dongle = old
-        self.assertIn("firmware 2.0.0", err.getvalue())
+        self.assertIn("firmware 2.1.0", err.getvalue())
 
     def test_print_mode_prints_packets_and_devices(self):
         ScriptedDongle.script = [b_line(1000, 37, -60, 1, ADV_IND_TEST),

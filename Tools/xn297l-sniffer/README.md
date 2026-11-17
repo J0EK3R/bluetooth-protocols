@@ -6,10 +6,11 @@
 > and with XN297L frames emulated via BLE advertising (address mode, `ble1m`), see [Status](#status).
 >
 > Since firmware 2.0.0 the same dongle also works as a **Bluetooth LE sniffer** (advertising scan
-> with device list in Wireshark, see [section 6](#6-bluetooth-le-sniffer)); connection following,
-> extended advertising and decryption (feature parity with the nRF Sniffer for Bluetooth LE) are
-> planned in further steps. Status of the BLE part: implemented and unit tested, **not yet tested
-> on hardware**.
+> with device list in Wireshark, see [section 6](#6-bluetooth-le-sniffer)); firmware 2.1.0 adds
+> **following a selected device and its connection** (CSA #1/#2, connection / channel map updates).
+> Extended advertising and decryption (feature parity with the nRF Sniffer for Bluetooth LE) are
+> planned in further steps. Status of the BLE part: advertising scan tested on hardware (works),
+> connection following implemented and unit tested, **not yet tested on hardware**.
 
 A normal Bluetooth dongle cannot receive XN297L transmissions: its controller only
 reports packets with the BLE access address `0x8E89BED6` and a valid CRC-24.
@@ -159,7 +160,10 @@ port is open (DTR set). Any terminal program can be used.
 | `bch <list>` | BLE: advertising channels to scan, subset of `37,38,39` in hop order (no repeats) | `37,38,39` |
 | `bdwell <ms>` | BLE: time per advertising channel, `0` = stay on the first | `300` |
 | `brssi <dBm>` | BLE: hide advertising packets weaker than this (-127 … 0, -127 = off) | `-127` |
-| `badv on|off` | BLE: "only advertising", never follow connections (stored; no effect before connection following exists) | `off` |
+| `badv on|off` | BLE: "only advertising", never follow connections | `off` |
+| `bfollow off\|<addr>[,<type>]` | BLE (firmware 2.1): follow a device. `<addr>` = 6 hex bytes in display order (`AABBCCDDEEFF` or `AA:BB:CC:DD:EE:FF`), `<type>` `0` public / `1` random (default: either). Only its advertising packets (and scan requests / responses) are reported, its CONNECT_IND is caught and the connection is followed. `off` = report all devices. A change restarts the receiver | `off` |
+| `bconn on\|off` | BLE: follow the connections of the followed device | `on` |
+| `brsp on\|off` | BLE: report scan requests / responses of the followed device | `on` |
 | `info` / `help` | show configuration / commands | |
 
 Answers: `OK`, `E <error>`, `I <info>` and for every frame
@@ -182,9 +186,23 @@ B 4126532 37 -58 1 01 0 D6BE898E4009665544332211020106...ABCDEF
 | `ch` | BLE channel index 0 … 39 (37/38/39 = advertising), not the frequency |
 | `rssi` | dBm |
 | `phy` | 1 = LE 1M (2 = 2M, 3/4 = coded, reserved for later releases) |
-| `flags` | hex; bit 0 = CRC ok. Further bits are reserved for connection following (data channel, direction, anchor, gap, aux, truncated) |
+| `flags` | hex bit field: `01` CRC ok, `02` slave → master (otherwise master → slave), `04` data channel packet of a followed connection, `20` first packet of a connection event (anchor), `40` gap anomaly (the spacing to the previous packet of the event is not 150 µs ± 20 µs: a packet was probably missed). `08` (aux) and `10` (truncated) are reserved |
 | `evt` | connection event counter (0 for advertising) |
-| `hex` | access address `D6BE898E` + PDU header (2 B) + payload + CRC (3 B), de-whitened, on-air byte order. Packets with a bad CRC are reported too (flag bit 0 = 0) |
+| `hex` | access address + PDU header (2 B) + payload + CRC (3 B), de-whitened, on-air byte order. The access address is `D6BE898E` for advertising packets and the one of the connection for data packets. Packets with a bad CRC are reported too (flag bit 0 = 0) |
+
+Status lines about a followed connection (only with `bfollow`; `int` in 1.25 ms, `to` in 10 ms units,
+`t` = device time in µs):
+
+```
+I conn new aa=50655A21 crcinit=123456 int=24 lat=0 to=200 map=FFFFFFFF1F hop=7 chsel=2 sca=5 t=4126532
+I conn upd evt=6 int=40 lat=0 to=300 map=FFFFFFFF1F t=4376532
+I conn lost reason=timeout|terminate|establish evt=123 t=9126532
+```
+
+`new` follows the report of the CONNECT_IND, `upd` is sent when a connection update or channel map update
+takes effect (at its instant), `lost` when the supervision timeout expired (`timeout`), an LL_TERMINATE_IND was
+seen (`terminate`) or no packet was heard after the CONNECT_IND (`establish`); the scan for the device then
+resumes.
 
 Output is queued in a ring buffer and never blocks the receiver; if the host reads too slowly,
 reports are dropped and announced with `I drop n=<count>` (hosts ignore unknown `I` lines).
@@ -363,8 +381,8 @@ Compared with the [nRF Sniffer for Bluetooth LE](../nrf-sniffer-ble/README.md) (
 | Advertising on 37/38/39 (LE 1M), RSSI, CRC flag, bad-CRC packets kept | implemented (not yet tested on hardware) |
 | Advertising hop sequence (toolbar *Adv Hop*), RSSI filter, *Defaults*, status bar | implemented |
 | Device list in the toolbar (name, address, RSSI; most recent 50, stale entries removed after 30 s) | implemented |
-| Option *Only advertising packets* | implemented (accepted; nothing to follow yet) |
-| Selecting a device to follow, CONNECT_IND, channel map / hop, CSA #1 and #2, connection update, scan response following | **planned** (selection in the toolbar is accepted and reported as "not supported yet") |
+| Option *Only advertising packets* | implemented |
+| Selecting a device to follow in the toolbar, CONNECT_IND, channel map / hop, CSA #1 and #2, window widening, both directions, More Data, connection update and channel map update at their instants, LL_TERMINATE_IND, supervision timeout, scan request / response following | implemented in firmware 2.1.0 (unit tested incl. the C logic, **not yet tested on hardware**) |
 | Extended advertising (AUX chains), 2M and Coded PHY, *Only legacy advertising* | planned |
 | Decryption (Legacy passkey / OOB, LTK) | planned |
 
@@ -372,34 +390,45 @@ Compared with the [nRF Sniffer for Bluetooth LE](../nrf-sniffer-ble/README.md) (
 
 Same as in [section 3.1](#31-installation), but copy **all** `extcap/*.py` files (the `ble_*.py` modules
 must be in the same folder as `xn297l_sniffer.py`; on Windows also `xn297l_sniffer.bat`) and flash
-the firmware **2.0.0** or newer (`firmware/prebuilt/`). With an older firmware the capture stops with
-the message "does not support the BLE sniffer".
+the firmware **2.1.0** (`firmware/prebuilt/`). With an older firmware the capture stops with
+the message "does not support the BLE sniffer" (2.0.0 has no connection following: "cannot follow a device").
 
 ### 6.2 Capturing in Wireshark
 
-1. Plug in the dongle, flash the 2.0.0 UF2 once (section 2.1), close every terminal program on the port.
+1. Plug in the dongle, flash the 2.1.0 UF2 once (section 2.1), close every terminal program on the port.
 2. Start Wireshark (restart it after copying the files). The interface list shows **BLE sniffer
    (nRF52840 dongle)** with its own toolbar. If it does not, check *Help - About Wireshark - Folders -
    Extcap path* and try *Capture - Refresh Interfaces*.
 3. Gear icon: set the serial port. Options: *Only advertising packets*, *Advertising channel hop
-   sequence* (default `37,38,39`), *RSSI filter* (default -127 = off), *Dwell time*.
+   sequence* (default `37,38,39`), *RSSI filter* (default -127 = off), *Dwell time*,
+   *Follow scan requests and responses*, *Follow device* (optional start value).
 4. Start the capture (double click). The toolbar *Interface Toolbars - BLE sniffer* shows
    **Device** (selector; entries `AA:BB:CC:DD:EE:FF "name" -62 dBm` appear while advertising packets
    arrive), **Adv Hop**, **RSSI filter** and **Defaults**; the status bar shows messages of the sniffer.
+   **Following a connection:** select the device in **Device** (the choice is sent to the dongle at once;
+   *All advertising devices* switches following off again). From then on only that device's advertising
+   packets are captured, and when a central connects to it (CONNECT_IND) the status bar says
+   "Following connection ..." and all data packets of the connection appear (both directions, *LE LL*
+   with direction M→S / S→M, LL control PDUs such as LL_VERSION_IND, LL_FEATURE_REQ, connection and channel
+   map updates, LL_TERMINATE_IND; ATT/GATT/L2CAP are decoded on top). Start the connection **after**
+   selecting the device (the CONNECT_IND must be seen). The status bar reports updates and the end of the
+   connection ("supervision timeout", "terminated").
 5. Packets appear as *LE LL* with the BLE dissector. Display filters: `btle.advertising_header.pdu_type == 0`
    (ADV_IND), `btle.advertising_address == 11:22:33:44:55:66`, `btle.length`, `btle.crc`. Bad-CRC packets are
    marked in the packet details (CRC *incorrect*).
 
 Console mode: `python extcap/xn297l_sniffer.py --print --interface xn297l_ble --port COM5 --adv-hop 37,38,39 --rssi-filter -80`
 prints one line per packet and the devices found. Options: `--only-advertising`, `--adv-hop`, `--rssi-filter`,
-`--adv-dwell`.
+`--adv-dwell`, `--follow AA:BB:CC:DD:EE:FF[,0|1]`, `--scan-follow-rsp` (Wireshark enables the latter by default;
+on the command line pass it explicitly).
 
 ### 6.3 Record format (DLT 256)
 
 Per record: a 10 byte pseudo header (RF channel `(f - 2402 MHz) / 2`, signal power, noise power 0,
 access address offenses 0, reference access address, flags) followed by access address + PDU + CRC without
-preamble. Flags set by the sniffer: de-whitened, signal power valid, reference access address valid, CRC
-checked, CRC valid (if the hardware CRC check passed). Packet time = start time of the capture + device time
+preamble. Flags set by the sniffer: de-whitened, signal power valid, reference access address valid (advertising access
+address or the one of the followed connection), CRC checked, CRC valid (if the hardware CRC check passed), and
+for connection packets the PDU type *data, master to slave* / *data, slave to master*. Packet time = start time of the capture + device time
 since the first packet. Format: <https://www.tcpdump.org/linktypes/LINKTYPE_BLUETOOTH_LE_LL_WITH_PHDR.html>.
 The PHY is not representable in the record except for the PHY bits of the flags (used from the 2M/Coded support on).
 
@@ -409,7 +438,23 @@ The PHY is not representable in the record except for the PHY bits of the flags 
 - The CRC bytes of the record are the value of the `RXCRC` register; the *CRC valid* flag is authoritative.
 - The single radio hops over the advertising channels (dwell 300 ms by default): packets of an advertiser on the
   other two channels are missed like with any single-radio sniffer; choose one channel and a dwell of 0 to
-  watch one channel continuously.
+  watch one channel continuously. With a followed device the scan is aligned with the advertiser (after its
+  packet the next channel is listened to for 20 ms), so its CONNECT_IND is caught on any of the three channels,
+  but a connection made while the sniffer listens on another channel is missed. The first connection event
+  after the CONNECT_IND is the most critical one: if it is missed the sniffer has to find the next anchor in a
+  window that keeps growing; if no packet is heard within 6 events the connection is given up ("establish").
+- Connection following: LE 1M PHY only (no LL_PHY_UPDATE_IND to 2M / Coded, no AUX_CONNECT_REQ, legacy
+  CONNECT_IND only), the connection must start while the sniffer follows the device. The window widening
+  assumes the master's worst case clock accuracy from the CONNECT_IND (SCA) plus 50 ppm for the sniffer.
+- The first packet of a connection event is taken as the master packet. If the master packet is missed and
+  only the slave answer is heard, directions of this event are swapped (the *gap* flag helps to spot that).
+- Encrypted connections: LL_ENC_REQ / ENC_RSP / START_ENC_REQ are seen in clear, afterwards LL control PDUs
+  cannot be read. The sniffer keeps following with the parameters it knows; if a connection update or channel
+  map update is sent while encrypted, it cannot learn the instant and the connection is lost (supervision
+  timeout) and has to be found again by reconnecting. The payload stays encrypted (decryption is planned).
+- The RSSI filter applies to advertising packets only; packets of a followed connection are never filtered.
+  The device list only shows advertising devices (connection packets do not change it).
+- While following a connection no other advertising traffic is captured.
 
 ---
 
@@ -417,8 +462,9 @@ The PHY is not representable in the record except for the PHY bits of the flags 
 
 | Part | Verified |
 |---|---|
-| Firmware build (Zephyr 3.7.0, SDK 0.16.8), UF2 at `0x1000` | ✅ (2.0.0 rebuilt without warnings, 42.8 kB flash, 29.2 kB RAM) |
-| BLE sniffer (firmware 2.0.0, interface `xn297l_ble`): host side, pcap/PHDR, toolbar protocol | unit tests ✅; **not yet tested on hardware / in Wireshark** |
+| Firmware build (Zephyr 3.7.0, SDK 0.16.8), UF2 at `0x1000` | ✅ (2.1.0 rebuilt without warnings, 47.5 kB flash, 34.9 kB RAM) |
+| BLE sniffer advertising scan (firmware 2.0.0 / 2.1.0, interface `xn297l_ble`) | host side unit tests ✅; hardware test by the user: "looks good" |
+| BLE connection following (firmware 2.1.0): channel selection #1 / #2 (Core Spec sample data), follow logic (C code compiled on the host and compared with a Python model), host side | unit tests ✅; **not yet tested on hardware / in Wireshark** |
 | Python decoder, Lua decoder (Lua 5.1 … 5.4) against reference frames | ✅ |
 | extcap discovered by Wireshark 4.2, live capture from a simulated dongle, dissector output | ✅ |
 | Mapping of the sync word to `BASE0`/`PREFIX0` (derived from the BLE access address layout) | ✅ on hardware |

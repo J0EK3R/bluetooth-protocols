@@ -26,9 +26,18 @@
  *   bch <list>           advertising channels to scan, subset of 37,38,39 in
  *                        hop order, e.g. "37,38,39" (default)
  *   bdwell <ms>          time per advertising channel, 0 = stay on the first
- *   brssi <dBm>          advertising RSSI threshold -127..0 (-127 = off)
+ *   brssi <dBm>          advertising RSSI threshold -127..0 (-127 = off);
+ *                        never applied to packets of a followed connection
  *   badv on|off          "only advertising": never follow connections
- *                        (stored; connection following arrives in a later release)
+ *   bfollow off|<addr>[,<type>]
+ *                        follow a device: only its advertising packets are
+ *                        reported and its connection is followed. <addr> is
+ *                        6 hex bytes in display order, e.g. "AABBCCDDEEFF" or
+ *                        "AA:BB:CC:DD:EE:FF"; <type> 0 = public, 1 = random
+ *                        (default: any). "off" = report all devices.
+ *   bconn on|off         follow connections of the followed device (default on)
+ *   brsp on|off          report scan requests / responses of the followed
+ *                        device (default on)
  *
  * Responses (dongle -> host)
  * --------------------------
@@ -46,6 +55,15 @@
  *                        access address + PDU header + payload + CRC as hex
  *                        (dewhitened, on-air byte order)
  *   I drop n=<count>     packets lost because the queue or the USB link was full
+ *   I conn new aa=<hex8> crcinit=<hex6> int=<n> lat=<n> to=<n> map=<hex10> hop=<n> chsel=1|2 sca=<n> t=<us>
+ *                        a connection is followed (int in 1.25 ms, to in 10 ms units)
+ *   I conn upd evt=<n> int=<n> lat=<n> to=<n> map=<hex10> t=<us>
+ *                        a connection / channel map update took effect
+ *   I conn lost reason=timeout|terminate|establish evt=<n> t=<us>
+ *                        the connection ended, the scan resumes
+ *   In follow mode the "flags" of a B line also use bit1 = slave to master,
+ *   bit2 = data channel packet, bit5 = first packet of a connection event,
+ *   bit6 = gap anomaly (a packet was probably missed); "evt" is the event counter.
  *
  * Output goes through a ring buffer (out.c) and never blocks the receiver.
  *
@@ -68,7 +86,7 @@
 #include "out.h"
 #include "radio.h"
 
-#define FW_VERSION "2.0.0"
+#define FW_VERSION "2.1.0"
 
 /* ------------------------------------------------------------------------ */
 /* Devices                                                                   */
@@ -118,6 +136,10 @@ static struct ble_config ble_cfg = {
 	.dwell_ms = 300,
 	.rssi_min = BLE_RSSI_OFF,
 	.only_adv = false,
+	.follow = false,
+	.follow_type = BLE_TARGET_ANY,
+	.follow_conn = true,
+	.follow_rsp = true,
 };
 
 static enum backend_mode mode = MODE_XN297L;   /* boots as XN297L sniffer (compatible) */
@@ -249,6 +271,16 @@ static void print_info(void)
 		out_str(" brssi=");
 		out_i32(ble_cfg.rssi_min);
 		out_str(ble_cfg.only_adv ? " badv=on" : " badv=off");
+		out_str(ble_cfg.follow_conn ? " bconn=on" : " bconn=off");
+		out_str(ble_cfg.follow_rsp ? " brsp=on" : " brsp=off");
+		out_str(" bfollow=");
+		if (ble_cfg.follow) {
+			for (int i = 5; i >= 0; i--) {        /* display order: last on-air byte first */
+				out_hex(&ble_cfg.follow_addr[i], 1);
+			}
+		} else {
+			out_str("off");
+		}
 	}
 	out_str("\n");
 }
@@ -329,6 +361,70 @@ static void handle_bch(const char *arg)
 	out_str("OK\n");
 }
 
+/*
+ * "bfollow off" or "bfollow <addr>[,<type>]": select the device to follow.
+ * The address is given in display order (as shown by Wireshark), the
+ * firmware stores it in on-air order (least significant byte first).
+ */
+static void handle_bfollow(const char *arg)
+{
+	struct ble_config tmp = ble_cfg;
+
+	if (strcmp(arg, "off") == 0) {
+		tmp.follow = false;
+	} else {
+		char text[24];
+		uint8_t display[6];
+		const char *comma = strchr(arg, ',');
+		size_t n = (comma != NULL) ? (size_t)(comma - arg) : strlen(arg);
+
+		if (n >= sizeof(text)) {
+			out_str("E bfollow needs off or an address like AABBCCDDEEFF[,0|1]\n");
+			return;
+		}
+		memcpy(text, arg, n);
+		text[n] = '\0';
+		tmp.follow_type = BLE_TARGET_ANY;
+		if (comma != NULL) {
+			if (strcmp(comma, ",0") == 0) {
+				tmp.follow_type = BLE_TARGET_PUBLIC;
+			} else if (strcmp(comma, ",1") == 0) {
+				tmp.follow_type = BLE_TARGET_RANDOM;
+			} else {
+				out_str("E bfollow address type must be 0 (public) or 1 (random)\n");
+				return;
+			}
+		}
+		if (parse_hex(text, display, sizeof(display)) != (int)sizeof(display)) {
+			out_str("E bfollow needs off or an address like AABBCCDDEEFF[,0|1]\n");
+			return;
+		}
+		for (size_t i = 0; i < sizeof(display); i++) {
+			tmp.follow_addr[i] = display[sizeof(display) - 1u - i];   /* on-air order */
+		}
+		tmp.follow = true;
+	}
+	ble_cfg = tmp;
+	apply_config(MODE_BLE);
+	out_str("OK\n");
+}
+
+/* Parse "on" / "off" into *value; reports an error naming `what` otherwise. */
+static bool parse_on_off(const char *arg, const char *what, bool *value)
+{
+	if (strcmp(arg, "on") == 0) {
+		*value = true;
+	} else if (strcmp(arg, "off") == 0) {
+		*value = false;
+	} else {
+		out_str("E ");
+		out_str(what);
+		out_str(" must be on or off\n");
+		return false;
+	}
+	return true;
+}
+
 /* Execute one command line. */
 static void handle_command(char *cmd)
 {
@@ -351,7 +447,8 @@ static void handle_command(char *cmd)
 	if (strcmp(cmd, "help") == 0) {
 		out_str("I commands: help info start stop sync <hex> len <n> "
 			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m> "
-			"mode <xn297l|ble> bch <37,38,39> bdwell <ms> brssi <dBm> badv <on|off>\n");
+			"mode <xn297l|ble> bch <37,38,39> bdwell <ms> brssi <dBm> badv <on|off> "
+			"bfollow <off|AABBCCDDEEFF[,0|1]> bconn <on|off> brsp <on|off>\n");
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "info") == 0) {
@@ -515,12 +612,24 @@ static void handle_command(char *cmd)
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "badv") == 0) {
-		if (strcmp(arg, "on") == 0) {
-			ble_cfg.only_adv = true;
-		} else if (strcmp(arg, "off") == 0) {
-			ble_cfg.only_adv = false;
-		} else {
-			out_str("E badv must be on or off\n");
+		if (!parse_on_off(arg, "badv", &ble_cfg.only_adv)) {
+			return;
+		}
+		apply_config(MODE_BLE);
+		out_str("OK\n");
+
+	} else if (strcmp(cmd, "bfollow") == 0) {
+		handle_bfollow(arg);
+
+	} else if (strcmp(cmd, "bconn") == 0) {
+		if (!parse_on_off(arg, "bconn", &ble_cfg.follow_conn)) {
+			return;
+		}
+		apply_config(MODE_BLE);
+		out_str("OK\n");
+
+	} else if (strcmp(cmd, "brsp") == 0) {
+		if (!parse_on_off(arg, "brsp", &ble_cfg.follow_rsp)) {
 			return;
 		}
 		apply_config(MODE_BLE);
@@ -602,9 +711,6 @@ static void report_packet(const struct radio_packet *pkt)
 	out_str("\n");
 }
 
-/* BLE advertising access address in on-air byte order (0x8E89BED6, LSB first). */
-static const uint8_t adv_access_address[4] = { 0xD6, 0xBE, 0x89, 0x8E };
-
 /*
  * Send one BLE packet report line ("B ...").
  * hex = access address + PDU header (2) + payload + CRC (3), upper case.
@@ -625,9 +731,79 @@ static void report_ble_packet(const struct ble_packet *p)
 	out_str(" ");
 	out_u32(p->evt);
 	out_str(" ");
-	out_hex(adv_access_address, sizeof(adv_access_address));
+	/* access address in on-air byte order (least significant byte first) */
+	const uint8_t aa[4] = { (uint8_t)p->aa, (uint8_t)(p->aa >> 8), (uint8_t)(p->aa >> 16),
+				(uint8_t)(p->aa >> 24) };
+
+	out_hex(aa, sizeof(aa));
 	out_hex(p->raw, 2u + (size_t)p->raw[1]);   /* S0 + LENGTH + payload */
 	out_hex(p->crc, sizeof(p->crc));
+	out_str("\n");
+}
+
+/* Print a 5 byte channel map as hex (channel 0 = lowest bit of the first byte). */
+static void out_chmap(const uint8_t map[BLE_CHMAP_LEN])
+{
+	out_hex(map, BLE_CHMAP_LEN);
+}
+
+/* Print " <key>=<value>" for a decimal value. */
+static void out_kv_u32(const char *key, uint32_t value)
+{
+	out_str(" ");
+	out_str(key);
+	out_str("=");
+	out_u32(value);
+}
+
+/*
+ * Send a status line about the followed connection ("I conn ...", see the
+ * command overview at the top of this file).
+ */
+static void report_conn_status(const struct ble_packet *p)
+{
+	const struct ble_conn_info *i = &p->info;
+
+	switch (p->kind) {
+	case BLE_KIND_CONN_NEW: {
+		const uint8_t aa_be[4] = { (uint8_t)(i->access_address >> 24),
+					   (uint8_t)(i->access_address >> 16),
+					   (uint8_t)(i->access_address >> 8),
+					   (uint8_t)i->access_address };
+		const uint8_t crc_be[3] = { (uint8_t)(i->crc_init >> 16), (uint8_t)(i->crc_init >> 8),
+					    (uint8_t)i->crc_init };
+
+		out_str("I conn new aa=");
+		out_hex(aa_be, sizeof(aa_be));
+		out_str(" crcinit=");
+		out_hex(crc_be, sizeof(crc_be));
+		out_kv_u32("int", i->interval);
+		out_kv_u32("lat", i->latency);
+		out_kv_u32("to", i->timeout);
+		out_str(" map=");
+		out_chmap(i->chmap);
+		out_kv_u32("hop", i->hop);
+		out_kv_u32("chsel", i->csa);
+		out_kv_u32("sca", i->sca);
+		break;
+	}
+	case BLE_KIND_CONN_UPD:
+		out_str("I conn upd");
+		out_kv_u32("evt", i->counter);
+		out_kv_u32("int", i->interval);
+		out_kv_u32("lat", i->latency);
+		out_kv_u32("to", i->timeout);
+		out_str(" map=");
+		out_chmap(i->chmap);
+		break;
+	default:
+		out_str("I conn lost reason=");
+		out_str(i->reason == BLE_LOST_TERMINATE ? "terminate" :
+			i->reason == BLE_LOST_ESTABLISH ? "establish" : "timeout");
+		out_kv_u32("evt", i->counter);
+		break;
+	}
+	out_kv_u32("t", p->t_us);
 	out_str("\n");
 }
 
@@ -672,7 +848,11 @@ static void report_packets(void)
 
 		while ((p = ble_radio_peek()) != NULL) {
 			if (out_reserve(REPORT_LINE_MAX)) {
-				report_ble_packet(p);
+				if (p->kind == BLE_KIND_PACKET) {
+					report_ble_packet(p);
+				} else {
+					report_conn_status(p);
+				}
 			} else if (out_is_enabled()) {
 				out_note_drop();   /* only a connected host can be told about it */
 			}

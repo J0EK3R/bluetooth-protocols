@@ -777,6 +777,8 @@ BLE_ARG_ONLY_ADV = 101
 BLE_ARG_ADV_HOP = 102
 BLE_ARG_RSSI = 103
 BLE_ARG_DWELL = 104
+BLE_ARG_SCAN_RSP = 105
+BLE_ARG_FOLLOW = 106
 
 # Control numbers of the interface toolbar (keep stable: Wireshark stores values by number).
 # 1 and 2 are reserved for the key type / key value controls (decryption, later milestone).
@@ -790,7 +792,9 @@ DEFAULT_ADV_HOP = "37,38,39"
 RSSI_OFF = -127                         # "no RSSI filter" (also the firmware default)
 BLE_DWELL_DEFAULT = 300                 # ms per advertising channel
 FIRMWARE_TOO_OLD = ("The dongle firmware does not support the BLE sniffer (command 'mode ble' "
-                    "rejected). Flash firmware 2.0.0 or newer (firmware/prebuilt/).")
+                    "rejected). Flash firmware 2.1.0 or newer (firmware/prebuilt/).")
+FIRMWARE_NO_FOLLOW = ("The dongle firmware cannot follow a device (command 'bfollow' rejected). "
+                      "Flash firmware 2.1.0 or newer (firmware/prebuilt/).")
 
 # Regex for the advertising channel list fields: 37, 38, 39 in any order, comma separated
 ADV_HOP_REGEX = r"^\s*3[789](\s*,\s*3[789])*\s*$"
@@ -814,6 +818,26 @@ def parse_adv_hop(text: str) -> list:
             raise ValueError(f"advertising channel {entry} is listed twice")
         channels.append(int(entry))
     return channels
+
+
+def parse_follow(text: str) -> str:
+    """Validate a device to follow and return the argument of the firmware command 'bfollow'.
+
+    Accepted: 'AA:BB:CC:DD:EE:FF' (display order, as shown by Wireshark), the same
+    without colons, optionally followed by ',0' (public) or ',1' (random address).
+    'off', '' and 'all' mean "follow nobody" and give 'off'.
+    """
+    text = str(text).strip()
+    if text.lower() in ("", "off", "all"):
+        return "off"
+    address, _, addr_type = text.partition(",")
+    digits = address.strip().replace(":", "")
+    if len(digits) != 12 or not all(c in "0123456789abcdefABCDEF" for c in digits) \
+            or addr_type.strip() not in ("", "0", "1"):
+        raise ValueError(f"'{text}' is not a device address; use AA:BB:CC:DD:EE:FF "
+                         "optionally followed by ,0 (public) or ,1 (random)")
+    suffix = f",{addr_type.strip()}" if addr_type.strip() else ""
+    return digits.upper() + suffix
 
 
 def parse_rssi(text) -> int:
@@ -863,11 +887,19 @@ def extcap_config_ble() -> None:
           f"{{range=0,60000}}{{default={BLE_DWELL_DEFAULT}}}"
           "{tooltip=Time spent on each advertising channel before hopping to the next one. "
           "0 = stay on the first channel}" + g)
+    print(f"arg {{number={BLE_ARG_SCAN_RSP}}}{{call=--scan-follow-rsp}}"
+          "{display=Follow scan requests and responses}{type=boolflag}{default=true}"
+          "{tooltip=Also capture the scan requests and scan responses of the followed device}" + g)
+    print(f"arg {{number={BLE_ARG_FOLLOW}}}{{call=--follow}}"
+          "{display=Follow device (address, optional)}{type=string}"
+          "{placeholder=AA:BB:CC:DD:EE:FF}"
+          "{tooltip=Start following this device (AA:BB:CC:DD:EE:FF, optionally ,0 public or ,1 random). "
+          "Leave empty to capture all devices; the device can also be picked in the toolbar}" + g)
 
     # Interface toolbar
     print(f"control {{number={CTRL_DEVICE}}}{{type=selector}}{{display=Device}}"
-          "{tooltip=Advertising devices seen recently. Selecting one follows it "
-          "(connection following needs a later firmware version)}")
+          "{tooltip=Advertising devices seen recently. Selecting one follows it: only its "
+          "advertising packets are captured and its connection is followed}")
     print(f"value {{control={CTRL_DEVICE}}}{{value={'all'}}}"
           "{display=All advertising devices}{default=true}")
     print(f"control {{number={CTRL_ADV_HOP}}}{{type=string}}{{display=Adv Hop}}"
@@ -888,6 +920,7 @@ def configure_ble(dongle, args) -> dict:
     """
     channels = parse_adv_hop(args.adv_hop)              # validate before touching the dongle
     rssi_min = parse_rssi(args.rssi_filter)
+    follow = parse_follow(args.follow)
     if not 0 <= args.adv_dwell <= 60000:
         raise ValueError("dwell time must be 0..60000 ms")
 
@@ -900,8 +933,13 @@ def configure_ble(dongle, args) -> dict:
     dongle.command(f"bdwell {args.adv_dwell}")
     dongle.command(f"brssi {rssi_min}")
     dongle.command("badv " + ("on" if args.only_advertising else "off"))
+    dongle.command("brsp " + ("on" if args.scan_follow_rsp else "off"))
+    try:
+        dongle.command("bfollow " + follow)
+    except RuntimeError as exc:                         # firmware 2.0.0 has no 'bfollow'
+        raise RuntimeError(FIRMWARE_NO_FOLLOW) from exc
     dongle.command("start")
-    return {"channels": channels, "rssi_min": rssi_min}
+    return {"channels": channels, "rssi_min": rssi_min, "follow": follow}
 
 
 class ToolbarHandler:
@@ -912,11 +950,11 @@ class ToolbarHandler:
     messages to send back to Wireshark as (control, command, payload) tuples.
     """
 
-    def __init__(self, dongle, session, ble_control):
+    def __init__(self, dongle, session, ble_control, follow="all"):
         self.dongle = dongle
         self.session = session
         self.ctl = ble_control          # the ble_control module (constants)
-        self.follow = "all"             # selected device value
+        self.follow = follow            # selected device value ('all' = nobody; --follow at start)
 
     def _status(self, text: str) -> tuple:
         return (CTRL_DEVICE, self.ctl.CMD_STATUSBAR, text)
@@ -945,16 +983,21 @@ class ToolbarHandler:
         """Toolbar is ready: announce the devices known so far and the state."""
         messages = [(CTRL_DEVICE, self.ctl.CMD_ADD, dev.value + "\0" + dev.display)
                     for dev in self.session.devices.devices.values()]
-        messages.append(self._status("BLE sniffer running"))
+        if parse_follow(self.follow) == "off":
+            messages.append(self._status("BLE sniffer running"))
+        else:
+            messages.append(self._status(f"BLE sniffer running, following {self.follow.split(',')[0]}"))
         return messages
 
     def _select_device(self, value: str) -> list:
-        """Device selector: remember the choice (following is not implemented yet)."""
+        """Device selector: tell the dongle which device to follow ('all' = nobody)."""
+        argument = parse_follow(value)
+        self.dongle.command("bfollow " + argument, keep=True)
         self.follow = value
-        if value == "all":
+        if argument == "off":
             return [self._status("Capturing all advertising devices")]
-        return [self._status(f"Selected {value.split(',')[0]}; following connections "
-                             "is not supported by this firmware version yet")]
+        return [self._status(f"Following {value.split(',')[0]}: waiting for its connection "
+                             "(its advertising packets are captured meanwhile)")]
 
     def _set_hop(self, text: str) -> list:
         channels = parse_adv_hop(text)
@@ -974,6 +1017,7 @@ class ToolbarHandler:
         self.session.rssi_min = RSSI_OFF
         self.dongle.command("bch " + DEFAULT_ADV_HOP, keep=True)
         self.dongle.command(f"brssi {RSSI_OFF}", keep=True)
+        self.dongle.command("bfollow off", keep=True)
         return [(CTRL_ADV_HOP, self.ctl.CMD_SET, DEFAULT_ADV_HOP),
                 (CTRL_RSSI, self.ctl.CMD_SET, str(RSSI_OFF)),
                 (CTRL_DEVICE, self.ctl.CMD_SET, "all"),
@@ -1027,7 +1071,7 @@ def run_capture_ble(args) -> None:
         if args.extcap_control_in and args.extcap_control_out:
             channel = ble_control.ControlChannel(args.extcap_control_in, args.extcap_control_out)
             channel.start()
-        handler = ToolbarHandler(dongle, session, ble_control)
+        handler = ToolbarHandler(dongle, session, ble_control, follow=args.follow or "all")
         with open(args.fifo, "wb", buffering=0) as fifo:
             fifo.write(ble_phdr.pcap_header_256())
             while True:
@@ -1074,8 +1118,9 @@ def run_print_ble(args) -> None:
     session = ble_session.Session(parse_rssi(args.rssi_filter))
     try:
         configure_ble(dongle, args)
+        following = "all devices" if parse_follow(args.follow) == "off" else f"following {args.follow}"
         print(f"# capturing BLE advertising, channels={args.adv_hop}, "
-              f"rssi filter={args.rssi_filter} (Ctrl+C to stop)", flush=True)
+              f"rssi filter={args.rssi_filter}, {following} (Ctrl+C to stop)", flush=True)
         while True:
             line = dongle.readline()
             if line is None:
@@ -1148,6 +1193,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="BLE: hide advertising packets below this RSSI in dBm (-127 = off)")
     p.add_argument("--adv-dwell", type=int, default=BLE_DWELL_DEFAULT,
                    help="BLE: ms per advertising channel, 0 = stay on the first")
+    p.add_argument("--scan-follow-rsp", action="store_true",
+                   help="BLE: also capture scan requests/responses of the followed device "
+                        "(Wireshark enables this by default)")
+    p.add_argument("--follow", default="",
+                   help="BLE: follow this device, AA:BB:CC:DD:EE:FF[,0|1] (empty = all devices)")
 
     # console mode
     p.add_argument("--print", action="store_true", help="print decoded frames to the console")

@@ -7,7 +7,9 @@ the serial command `mode`:
 - `xn297l` (default after boot): raw GFSK receiver that synchronises on an XN297L sync word and
   reports the captured bytes as `P` lines.
 - `ble`: Bluetooth LE sniffer (advertising channels 37/38/39, LE 1M, hardware whitening and CRC-24,
-  every packet incl. bad CRC reported as `B` line; connection following etc. follows in later releases).
+  every packet incl. bad CRC reported as `B` line). With a selected device (`bfollow`) it follows the
+  device's connection (CSA #1/#2, connection / channel map updates, both directions). Extended
+  advertising, 2M / Coded PHY and decryption follow in later releases.
 
 Both report as text lines over USB CDC.
 Usage, command set, flashing and building: [../README.md](../README.md).
@@ -19,7 +21,7 @@ Usage, command set, flashing and building: [../README.md](../README.md).
 | `CMakeLists.txt` | Zephyr build file (`west build -b nrf52840_mdk_usb_dongle firmware`) |
 | `prj.conf` | Kconfig: USB CDC ACM, no Bluetooth stack, no logging/console on the data port, UF2 output |
 | [boards/](boards/README.md) | devicetree overlay for the dongle (CDC ACM UART) |
-| [src/](src/README.md) | C sources: command parser and main loop, buffered USB output, XN297L RADIO driver, BLE RADIO driver |
+| [src/](src/README.md) | C sources: command parser and main loop, buffered USB output, XN297L RADIO driver, BLE RADIO driver, hardware independent BLE logic (channel selection, PDU parsing, connection following) |
 | [prebuilt/](prebuilt/README.md) | ready-to-flash `.uf2` built from this source |
 
 ## Build

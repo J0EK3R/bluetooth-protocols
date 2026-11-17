@@ -5,6 +5,7 @@ The firmware (mode "ble") sends text lines:
 
     B <t_us> <ch> <rssi> <phy> <flags> <evt> <hex>     one captured packet
     I drop n=<count>                                   packets lost in the dongle
+    I conn new|upd|lost ...                            state of the followed connection
     P ...                                              XN297L lines, ignored here
 
 This module turns them into pcap records (DLT 256, see ble_phdr.py) and keeps
@@ -24,10 +25,20 @@ FLAG_DIR_S2M = 0x02
 FLAG_DATA = 0x04
 FLAG_AUX = 0x08
 FLAG_TRUNC = 0x10
+FLAG_ANCHOR = 0x20             # first packet of a connection event
+FLAG_GAP = 0x40                # a packet of the event was probably missed
 
 DEVICE_LIST_MAX = 50           # most recently seen devices offered in the toolbar
 DEVICE_STALE_S = 30.0          # devices not seen for this long are removed
 NO_RSSI_FILTER = -127          # RSSI threshold meaning "off"
+
+# Why a followed connection ended (value of "reason=" in 'I conn lost')
+LOST_TEXT = {
+    "timeout": "Connection lost: supervision timeout (the sniffer lost the connection or the link broke)",
+    "terminate": "Connection terminated (LL_TERMINATE_IND); scanning for the device again",
+    "establish": "Connection not established: no packet seen after the CONNECT_IND; "
+                 "scanning for the device again",
+}
 
 ALL_DEVICES_VALUE = "all"      # selector value of the "no device selected" entry
 ALL_DEVICES_DISPLAY = "All advertising devices"
@@ -79,6 +90,49 @@ def parse_info_line(line: str):
         if sep:
             info[key] = value
     return info
+
+
+def parse_conn_line(line: str):
+    """Parse an 'I conn new|upd|lost key=value ...' line into (kind, dict), or None.
+
+    Numbers stay strings; use conn_int() for the decimal and conn_hex() for the
+    hexadecimal fields. Unknown or malformed lines give None (they are ignored).
+    """
+    tokens = line.split()
+    if len(tokens) < 3 or tokens[0] != "I" or tokens[1] != "conn" \
+            or tokens[2] not in ("new", "upd", "lost"):
+        return None
+    fields = {}
+    for token in tokens[3:]:
+        key, sep, value = token.partition("=")
+        if sep:
+            fields[key] = value
+    return tokens[2], fields
+
+
+def conn_int(fields: dict, key: str, default=0) -> int:
+    """Decimal field of a connection line (default if missing or malformed)."""
+    try:
+        return int(fields.get(key, default))
+    except ValueError:
+        return default
+
+
+def conn_status_text(kind: str, fields: dict) -> str:
+    """Human readable text of a connection state line for the status bar."""
+    if kind == "lost":
+        return LOST_TEXT.get(fields.get("reason", ""), "Connection ended")
+    interval_ms = conn_int(fields, "int") * 1.25
+    try:
+        channels = bin(int(fields.get("map", "0"), 16)).count("1")
+    except ValueError:
+        channels = 0
+    details = (f"interval {interval_ms:g} ms, latency {conn_int(fields, 'lat')}, "
+               f"supervision timeout {conn_int(fields, 'to') * 10} ms, {channels} channels")
+    if kind == "new":
+        return (f"Following connection {fields.get('aa', '?')} "
+                f"(channel selection #{conn_int(fields, 'chsel', 1)}), {details}")
+    return f"Connection updated: {details}"
 
 
 class TimeUnwrapper:
@@ -195,6 +249,8 @@ class Session:
         self.first_t_us = None
         self.packets = 0
         self.dropped = 0            # packets the dongle reported as lost
+        self.connections = 0        # connections followed so far
+        self.connected = False      # a connection is followed right now
 
     def timestamp(self, t_us: int) -> float:
         """Pcap timestamp: host start time plus the device time elapsed since the first packet."""
@@ -210,6 +266,7 @@ class Session:
         ('add', value, display)               device appeared (toolbar)
         ('remove', value)                     device disappeared (toolbar)
         ('status', text)                      status bar message
+        ('conn', kind, fields)                connection state: 'new', 'upd' or 'lost'
         """
         now = time.time() if now is None else now
         if line.startswith("B "):
@@ -224,7 +281,19 @@ class Session:
             self.dropped += count
             return [("status", f"Dongle dropped {count} packets (USB too slow), "
                                f"{self.dropped} in total")]
+        conn = parse_conn_line(line)
+        if conn is not None:
+            return self._handle_connection(*conn)
         return []                    # P lines, other I lines, garbage: ignored
+
+    def _handle_connection(self, kind: str, fields: dict) -> list:
+        """A connection state line: keep the state, tell the user."""
+        if kind == "new":
+            self.connections += 1
+            self.connected = True
+        elif kind == "lost":
+            self.connected = False
+        return [("conn", kind, fields), ("status", conn_status_text(kind, fields))]
 
     def _handle_packet(self, pkt: BlePacket, now) -> list:
         """Apply the RSSI filter, update the device table and build the pcap record."""
@@ -236,7 +305,10 @@ class Session:
         events = []
         pdu = None
         pdu_type = ble_phdr.PDU_ADV_OR_DATA
-        if aa == ble_phdr.ADV_ACCESS_ADDRESS:
+        if pkt.flags & FLAG_DATA:
+            # connection packet: Wireshark needs the direction (master -> slave or back)
+            pdu_type = ble_phdr.PDU_DATA_S2M if pkt.flags & FLAG_DIR_S2M else ble_phdr.PDU_DATA_M2S
+        elif aa == ble_phdr.ADV_ACCESS_ADDRESS:
             pdu = ble_pdu.parse_adv_packet(pkt.data)
             if pdu is not None and pkt.crc_ok:
                 events.extend(self.devices.update(pdu, pkt.rssi, now))
@@ -254,7 +326,12 @@ class Session:
         """One line description for the console mode."""
         crc = "CRC ok " if pkt.crc_ok else "CRC BAD"
         what = "?"
-        if pdu is not None:
+        if pkt.flags & FLAG_DATA:
+            direction = "S->M" if pkt.flags & FLAG_DIR_S2M else "M->S"
+            anchor = " (anchor)" if pkt.flags & FLAG_ANCHOR else ""
+            gap = " [gap: packet missed?]" if pkt.flags & FLAG_GAP else ""
+            what = f"{direction} event {pkt.evt}{anchor}{gap} {ble_pdu.describe_data_pdu(pkt.data)}"
+        elif pdu is not None:
             what = pdu.type_name
             if pdu.adv_addr:
                 what += f" {pdu.adv_addr}"
