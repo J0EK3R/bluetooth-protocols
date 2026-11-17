@@ -25,8 +25,8 @@ Each diagram shows one telegram as BLE advertising packet next to the resulting 
 
 ## Photos
 
-Own photos (straightened, background removed). The documents use the PNG files; the JPEG files
-are the same photos in JPEG format and are not referenced by any document.
+Own photos (straightened, background removed). The documents use the PNG files where both exist; the JPEG
+files next to them are the same photos in JPEG format and are not referenced. The board and chip close-ups exist as JPEG only.
 
 | File | Content | Used in |
 |---|---|---|
@@ -34,3 +34,11 @@ are the same photos in JPEG format and are not referenced by any document.
 | `scm8_receiver_overview.png` / `.jpg` | SCM8 receiver, overview | [SCM8.md](../SCM8.md) |
 | `scm8_remote_front.png` / `.jpg` | SCM8 handset, front | [SCM8-Remote.md](../SCM8-Remote.md), [main README](../../README.md) |
 | `scm8_remote_top.png` / `.jpg` | SCM8 handset, top edge with shoulder buttons | [SCM8-Remote.md](../SCM8-Remote.md) |
+| `scm8_housing_perspective.png` | SCM8 housing at an angle | [SCM8.md](../SCM8.md) |
+| `scm8_board_front.png` | SCM8 board `HF-JX021RX`, front (component side) | [SCM8.md](../SCM8.md) |
+| `scm8_board_back.png` | SCM8 board, back in the case | [SCM8.md](../SCM8.md) |
+| `scm8_board_back_battery.png` | SCM8 board, back with battery in the case | [SCM8.md](../SCM8.md) |
+| `scm8_battery.png` | SCM8 battery pack (Li-ion 14500, 7.4 V, 500 mAh) | [SCM8.md](../SCM8.md) |
+| `scm8_board_power.jpg` | close-up: USB-C, button, power section | [SCM8.md](../SCM8.md) |
+| `scm8_board_rf.jpg` | close-up: MCU, antenna, `B+` / `B-` pads | [SCM8.md](../SCM8.md) |
+| `scm8_chip_mcu.jpg` | close-up: Panchip PAN7431U71A and crystal | [SCM8.md](../SCM8.md) |

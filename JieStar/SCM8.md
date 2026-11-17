@@ -1,7 +1,7 @@
 # JIESTAR SCM8 – Bluetooth Protocol
 
-> Source: [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/JieStar/JieStarSCM8.cs`, `JieStarBase.cs`, `JieStar.cs`, `JieStarDeviceManager.cs`, `Protocols/JieStarProtocol.cs`, `Protocols/CryptTools.cs`, the platform `JieStarPlatformService.cs` files, `UI/Controls/Devices/JieStarSCM8ChannelSelectorView.xaml` and `JieStarSCM8DatagramTests.cs`.
-> Last updated: 2026-11-15
+> Source: own photos of the receiver and board (section 8); [J0EK3R/brickcontroller2](https://github.com/J0EK3R/brickcontroller2) – `DeviceManagement/JieStar/JieStarSCM8.cs`, `JieStarBase.cs`, `JieStar.cs`, `JieStarDeviceManager.cs`, `Protocols/JieStarProtocol.cs`, `Protocols/CryptTools.cs`, the platform `JieStarPlatformService.cs` files, `UI/Controls/Devices/JieStarSCM8ChannelSelectorView.xaml` and `JieStarSCM8DatagramTests.cs`.
+> Last updated: 2026-11-17
 
 <img src="img/jiestarscm8_image.png" alt="JIESTAR SCM8 module" height="180">
 
@@ -370,11 +370,19 @@ The first 8 encoded bytes (preamble + address) are identical for all telegrams o
 
 ## 8. Hardware
 
-Own photos of the receiver module (straightened, background removed; no board analysis yet, the case has not been opened):
+Own photos of the receiver module and the opened board. Part identifications are read from the
+markings in the photos; confidence levels: **confirmed** (readable marking or calculation),
+**likely** (marking scheme or circuit context), **unknown**. No datasheets were found for the
+two main parts, so their function is partly inferred.
 
+### 8.1 Housing
+
+<img src="img/scm8_housing_perspective.png" alt="JIESTAR SCM8 housing at an angle" height="300">
 <img src="img/scm8_receiver_ports.png" alt="JIESTAR SCM8 receiver, connector side" height="300">
 
 <img src="img/scm8_receiver_overview.png" alt="JIESTAR SCM8 receiver, overview" height="260">
+
+*Own photos (straightened, background removed).*
 
 | Item | Observation |
 |---|---|
@@ -387,6 +395,98 @@ Own photos of the receiver module (straightened, background removed; no board an
 Port names on the receiver match the markings on the original handset ([SCM8-Remote.md](SCM8-Remote.md#handset)):
 sticks A … D, buttons E … H.
 
+### 8.2 Board
+
+<img src="img/scm8_board_front.png" alt="Front (component side) of the SCM8 board HF-JX021RX" height="480">
+<img src="img/scm8_board_back.png" alt="Back of the SCM8 board in the housing part" height="480">
+<img src="img/scm8_board_back_battery.png" alt="Back of the board with the battery in the housing part" height="480">
+
+*Left: front (component side, silkscreen date `2024/8/11`). Middle: back in the case. Right: back with the battery inserted. Own photos.*
+
+| Property | Value |
+|---|---|
+| Board name | `HF-JX021RX`, dated `2024/8/11` (the name scheme resembles the `HF-XKL4.0RX` of the [MK4.0](../MouldKing/MK4.0.md#8-hardware-receiver-board) and the `HF-DL4.0RX` of the [DIY module](../MouldKing/MK-DIY.md#12-board)) |
+| MCU / radio SoC | Panchip `PAN7431U71A` (QFN-32) with 16.000 MHz crystal and wire antenna |
+| Motor drivers | 8 × Sytatek SA8317E (SOP-8), presumably one H-bridge per port A … H |
+| Power | USB-C, 10 µH inductor, Schottky `SS24`, current shunt `R010`, battery pads `B+` / `B-` |
+| User interface | 1 push button (indicator and charging LEDs behind the two small holes of the housing) |
+
+### 8.3 Components
+
+<img src="img/scm8_board_power.jpg" alt="Close-up of the upper board part with USB-C socket, button and power section" height="420">
+<img src="img/scm8_board_rf.jpg" alt="Close-up of the lower board part with MCU, antenna and battery pads" height="420">
+<img src="img/scm8_chip_mcu.jpg" alt="Close-up of the Panchip MCU and the crystal" height="420">
+
+*Left: upper part with USB-C socket, button, inductor and Schottky diode. Middle: lower part with MCU, antenna and `B+` / `B-` pads. Right: MCU and crystal. Own photos.*
+
+| Marking | Package | Identification | Confidence |
+|---|---|---|---|
+| `PAN7431U71A`, second line `7431BU12BB`, date code `2532…a` | QFN-32 | **Panchip PAN7431** radio SoC (section 8.4) | confirmed (marking), function inferred |
+| 16.000 MHz | crystal (SMD) | clock of the SoC (marking `16.000 MHz`) | confirmed |
+| `SA8317E` (8 ×), date `344` | SOP-8 | **Sytatek SA8317E** single-channel H-bridge motor driver (section 8.5) | confirmed (part), specs unverified |
+| `3400` | SOT-23(-6?) | probably an N-channel MOSFET (3400 is the usual marking of the AO3400 type); role (load switch / charger path) unknown | likely |
+| `3401` | SOT-23 | probably a P-channel MOSFET (3401 is the usual marking of the AO3401 type), probably reverse-polarity or load switch | likely |
+| `7333` | SOT-23 | 3.3 V LDO of the HT7333 type (a bare `7333` fits a clone) | likely |
+| `SS24` | SMA | Schottky rectifier, 2 A / 40 V | confirmed (generic marking) |
+| `100` | inductor | 10 µH (3-digit code 10 × 10^0 µH), presumably the boost / charger inductor of the 2S pack | confirmed (code), role likely |
+| `R010` | resistor | 0.010 Ω current shunt (R as decimal point), role (charge or load current sense) unknown | likely (value) |
+| `102` / `103` / `101` | resistors | 1 kΩ / 10 kΩ / 100 Ω (3-digit code) | confirmed (code convention) |
+| `S4` (several) | SOD-323 / SOT-23 (?) | small-signal diode or Schottky | unknown |
+| USB-C, push button | – | charging socket (5 V) and power / module button | confirmed |
+
+Expected power architecture (inference, *likely*, not verified by measurement):
+
+```
+USB-C 5 V -> charger / boost (3400 / 3401 MOSFETs?, 10 uH, SS24, R010 shunt?) -> 2S Li-ion 7.4 V (B+ / B-)
+                                                              |
+              +-----------------------------------------------+
+              v                                               v
+      LDO "7333" 3.3 V -> PAN7431U71A                  8 x SA8317E (VM) -> ports A to H
+```
+
+### 8.4 MCU: Panchip PAN7431U71A
+
+The marking `PAN7431U71A` identifies a **Panchip Microelectronics** (磐启微电子) part. **No datasheet
+or other detail about the PAN7431 was found** (core, flash, RAM, radio modes and pinout are
+therefore *unknown*). What is known:
+
+- Panchip also makes the [XN297L](../Chips/XN297L.md) 2.4 GHz GFSK transceiver, which the original
+  handsets of Mould King and JIESTAR use.
+- The SCM8 receiver listens to the **XN297L frame format** (preamble `71 0F 55`, address, CRC-16,
+  scrambler; see section 5 and [SCM8-Remote.md](SCM8-Remote.md)). It is therefore *likely* that
+  the PAN7431 is an SoC (MCU with integrated 2.4 GHz radio) that implements this proprietary
+  protocol in firmware or hardware, and that the same chip receives the BLE advertising telegrams
+  of the app (section 5). Both are inferences from the behaviour, not from a datasheet.
+- The second marking line `7431BU12BB` and the date code `2532…a` (probably week 32 of 2025,
+  *unverified*) are not documented.
+
+The wire antenna next to the chip and the single 16.000 MHz crystal fit a 2.4 GHz SoC without
+further RF parts.
+
+### 8.5 Motor driver: Sytatek SA8317E
+
+Eight `SA8317E` in SOP-8 (date code `344`, format undocumented) presumably drive the ports A … H,
+one H-bridge each (eight chips for eight ports). The part is made by Shenzhen Sytatek (矽塔科技,
+[sytatek.com](https://www.sytatek.com/motor/direct/)), the same vendor as the SA8321 on the
+[Mould King DIY module](../MouldKing/MK-DIY.md#15-motor-driver-sytatek-sa8321), see there for
+sources. The SA8317E belongs to the single-channel brushed-DC H-bridge family of this vendor.
+The electrical data of the SA8317E itself (supply range, current, pinout) are **unverified**; the
+SA8321 values from the DIY page must not be assumed.
+
+### 8.6 Battery
+
+<img src="img/scm8_battery.png" alt="Li-ion battery pack 14500, 7.4 V 500 mAh" height="240">
+
+*Own photo of the battery pack.*
+
+| Property | Value |
+|---|---|
+| Cell type | Li-ion **14500** (AA size), 2S pack |
+| Rating | 7.4 V, 500 mAh, 3.70 Wh (7.4 V × 0.5 Ah, consistent) |
+| Maker | Shantou Yaohui New Energy Co., Ltd |
+| Date | 2025/12/05 |
+| Cable | 3 wires (red, blue, black): presumably `+`, balance tap (between the two cells) and `-` (*unverified*, whether the balance wire is evaluated by the charger is unknown) |
+
 ---
 
 ## 9. Open questions
@@ -395,5 +495,5 @@ sticks A … D, buttons E … H.
 - ~~How the device slot is selected on the receiver~~ – according to the [operating instructions](SCM8-Manual.md#6-app-operation): hold the power button for 1 s to step from module 1 to 2 to 3 (indicator flashes rapidly); not verified with the app protocol.
 - Whether mode selection and a failsafe timeout exist as on the MK4.0.
 - Interaction with an [SCM4](SCM4.md) or [PowerBox](../PowerBox/A-Series.md) receiver in range: the Connect identifiers `A4 … 5B` are shared.
-- Hardware details: radio chip and board (case not opened, section 8).
+- ~~Hardware details: radio chip and board~~ – board `HF-JX021RX` photographed (section 8); open: PAN7431 datasheet and pinout (core, flash, radio modes), SA8317E electrical data and pinout, role of the `3400` / `3401` MOSFETs, wiring of the battery balance tap.
 - ~~Protocol of the original 2.4 GHz handset~~ – captured: [SCM8-Remote.md](SCM8-Remote.md) (open points in its section 9).
