@@ -10,8 +10,12 @@ Run:   python tests/test_decoder.py
 Lua tests run only if the 'lupa' package is installed (pip install lupa).
 """
 
+import argparse
+import contextlib
+import io
 import os
 import random
+import re
 import sys
 import unittest
 
@@ -229,6 +233,117 @@ class RawModeTests(unittest.TestCase):
         hdr = xs.pseudo_header(params, 40, -55, 1000)
         self.assertEqual(hdr[1], 0x05)                              # scrambler bit + raw bit
         self.assertEqual(hdr[4], 3)                                 # sync word length
+
+
+# ---------------------------------------------------------------------------
+# Channel list parsing / extcap option description
+# ---------------------------------------------------------------------------
+
+# (text, expected expanded channel list) - accepted by parser AND validation regex
+VALID_CHANNELS = [
+    ("2", [2]),
+    ("0", [0]),
+    ("100", [100]),
+    ("2,26,80", [2, 26, 80]),
+    (" 2 , 26 ,80 ", [2, 26, 80]),
+    ("0-3", [0, 1, 2, 3]),
+    ("5-5", [5]),
+    ("1,20,30,40-42", [1, 20, 30, 40, 41, 42]),
+    ("02,007", [2, 7]),
+    ("0-83", list(range(84))),
+    ("17-100", list(range(17, 101))),
+]
+
+# Rejected by the parser; INVALID_SYNTAX ones are also rejected by the regex
+INVALID_SYNTAX = ["", ",", "2,", ",2", "a", "2;3", "-5", "5-", "1--3", "1-2-3", "2 3", "1.5"]
+# Syntactically fine for the regex, but rejected by the parser (range order, count, 0..100)
+INVALID_SEMANTICS = ["101", "5-101", "10-5", "0-100", "0-83,90", "0-41,0-42"]
+
+
+class ChannelListTests(unittest.TestCase):
+    def test_parse_valid(self):
+        for text, expected in VALID_CHANNELS:
+            with self.subTest(text=text):
+                self.assertEqual(xs.parse_channels(text), expected)
+
+    def test_parse_invalid(self):
+        for text in INVALID_SYNTAX + INVALID_SEMANTICS:
+            with self.subTest(text=text):
+                with self.assertRaises(ValueError):
+                    xs.parse_channels(text)
+
+    def test_limit_is_84_entries(self):
+        self.assertEqual(len(xs.parse_channels("0-83")), 84)
+        with self.assertRaises(ValueError) as ctx:
+            xs.parse_channels("0-84")
+        self.assertIn("84", str(ctx.exception))
+
+    def test_error_message_is_clear(self):
+        with self.assertRaises(ValueError) as ctx:
+            xs.parse_channels("10-5")
+        self.assertIn("n <= m", str(ctx.exception))
+
+    def test_regex_matches_valid(self):
+        for text, _ in VALID_CHANNELS:
+            with self.subTest(text=text):
+                self.assertIsNotNone(re.match(xs.CHANNEL_REGEX, text))
+
+    def test_regex_rejects_invalid_syntax(self):
+        for text in INVALID_SYNTAX + ["101", "5-101", "1000"]:
+            with self.subTest(text=text):
+                self.assertIsNone(re.match(xs.CHANNEL_REGEX, text))
+
+    def test_configure_rejects_bad_channels(self):
+        args = argparse.Namespace(no_scramble=False, payload_length=0, extra_bytes=0,
+                                  mode="address", address="C1C2C3C4C5", channels="0-90",
+                                  dwell=300, rate="nrf1m")
+        dongle = FakeDongle()
+        with self.assertRaises(ValueError):
+            xs.configure(dongle, args)
+        self.assertEqual(dongle.commands, [])           # nothing sent to the dongle
+
+
+class ExtcapConfigTests(unittest.TestCase):
+    def config_lines(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            xs.extcap_config()
+        return buf.getvalue().splitlines()
+
+    def test_groups_present(self):
+        text = "\n".join(self.config_lines())
+        for group in (xs.GROUP_GENERAL, xs.GROUP_XN297L, xs.GROUP_RAW):
+            self.assertIn("{group=" + group + "}", text)
+
+    def test_arg_numbers_and_calls_unchanged(self):
+        calls = {}
+        for line in self.config_lines():
+            m = re.match(r"arg \{number=(\d+)\}\{call=([^}]+)\}", line)
+            if m:
+                calls[int(m.group(1))] = m.group(2)
+        self.assertEqual(calls, {
+            0: "--port", 1: "--mode", 2: "--address", 3: "--address-length",
+            4: "--payload-length", 5: "--channels", 6: "--dwell", 7: "--rate",
+            8: "--no-scramble", 9: "--extra-bytes", 10: "--sync", 11: "--raw-length"})
+
+    def test_well_formed(self):
+        # Every line is a sequence of balanced, non-nested {key=value} fields; the
+        # regex of the channel validation contains no braces (would break the field).
+        for line in self.config_lines():
+            self.assertRegex(line, r"^(arg|value) (\{[a-z]+=[^{}]*\})+$")
+
+    def test_channels_option(self):
+        line = next(l for l in self.config_lines() if "{call=--channels}" in l)
+        self.assertIn("{validation=" + xs.CHANNEL_REGEX + "}", line)
+        self.assertIn("{placeholder=", line)
+        self.assertIn("84", line)
+        self.assertIn("{group=" + xs.GROUP_GENERAL + "}", line)
+
+    def test_every_arg_has_tooltip_and_group(self):
+        for line in self.config_lines():
+            if line.startswith("arg "):
+                self.assertIn("{tooltip=", line)
+                self.assertIn("{group=", line)
 
 
 # ---------------------------------------------------------------------------

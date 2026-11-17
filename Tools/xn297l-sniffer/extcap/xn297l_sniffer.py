@@ -298,10 +298,58 @@ def parse_packet_line(line: str):
         return None
 
 
+CHANNEL_MAX = 100                      # highest RF channel (2500 MHz), firmware limit
+CHANNEL_LIST_MAX = 84                  # max. entries in the expanded channel list (firmware)
+
+# Regex used by Wireshark ({validation=...}) to mark an invalid channel list red.
+# It accepts the same syntax as parse_channels(): numbers 0..100 (leading zeros and
+# spaces tolerated), optional ranges n-m, comma separated. It does NOT check n <= m
+# or the 84 entry limit (a regex cannot); parse_channels() does that. No braces are
+# used because braces would end the extcap field.
+_CH_NUM = r"0*(100|[1-9]?[0-9])"
+_CH_ENTRY = rf"{_CH_NUM}(\s*-\s*{_CH_NUM})?"
+CHANNEL_REGEX = rf"^\s*{_CH_ENTRY}(\s*,\s*{_CH_ENTRY})*\s*$"
+
+
+def parse_channels(text: str) -> list:
+    """Parse and validate an RF channel list, mirroring the firmware 'ch' command.
+
+    Syntax: single channels and ranges n-m, comma separated, e.g. "2,26,80",
+    "0-83" or "1,20,30,40-83". Channel = MHz - 2400, allowed 0..100. The
+    expanded list may have at most 84 entries (duplicates count).
+
+    Returns the expanded list of channel numbers; raises ValueError with a
+    clear message if the list is invalid.
+    """
+    channels = []
+    for entry in text.split(","):
+        entry = entry.strip()           # spaces around an entry are tolerated
+        if not entry:
+            raise ValueError(f"channel list '{text}' has an empty entry "
+                             "(example: 2,26,80 or 0-83)")
+        first_s, sep, last_s = (part.strip() for part in entry.partition("-"))
+        # isdigit() also rejects signs, so "-5" or "1--3" end up here
+        if not first_s.isdigit() or (sep and not last_s.isdigit()):
+            raise ValueError(f"'{entry}' is not a channel or range n-m "
+                             "(example: 2,26,80 or 0-83)")
+        first = int(first_s)
+        last = int(last_s) if sep else first
+        if first > CHANNEL_MAX or last > CHANNEL_MAX:
+            raise ValueError(f"'{entry}': channels must be 0..{CHANNEL_MAX} (MHz - 2400)")
+        if last < first:
+            raise ValueError(f"'{entry}': range must be n-m with n <= m")
+        channels.extend(range(first, last + 1))
+        if len(channels) > CHANNEL_LIST_MAX:
+            raise ValueError(f"channel list has more than {CHANNEL_LIST_MAX} entries "
+                             "(firmware limit)")
+    return channels
+
+
 def configure(dongle: Dongle, args) -> dict:
     """Send the configuration to the dongle and return capture parameters."""
     scrambled = not args.no_scramble
     payload_len = args.payload_length
+    parse_channels(args.channels)       # fail early with a clear message, before touching the dongle
     # bytes to capture behind the address: payload (+ search margin) + CRC
     # + optional extra bytes, e.g. to see an acknowledgement that follows the frame
     body_len = (payload_len if payload_len > 0 else MAX_PAYLOAD) + 2 + args.extra_bytes
@@ -328,7 +376,7 @@ def configure(dongle: Dongle, args) -> dict:
     dongle.command("stop")
     dongle.command("sync " + sync.hex().upper())
     dongle.command(f"len {min(capture_len, 250)}")
-    dongle.command("ch " + args.channels.replace(" ", ""))
+    dongle.command("ch " + args.channels.replace(" ", ""))   # validated above
     dongle.command(f"dwell {args.dwell}")
     dongle.command(f"rate {args.rate}")
     dongle.command("start")
@@ -415,69 +463,102 @@ def extcap_text(text: str) -> str:
     return str(text).replace("{", "(").replace("}", ")")
 
 
+GROUP_GENERAL = "General"
+GROUP_XN297L = "XN297L (address / promiscuous)"
+GROUP_RAW = "Raw mode"
+
+
 def extcap_config() -> None:
-    """Describe the options shown in Wireshark's interface settings dialog."""
+    """Describe the options shown in Wireshark's interface settings dialog.
+
+    The options are grouped into tabs ({group=...}). Argument numbers and
+    --call names are stable so saved Wireshark settings stay valid. Labels and
+    tooltips say which sync mode uses an option and which values are allowed.
+    """
+    g = f"{{group={GROUP_GENERAL}}}"
+    x = f"{{group={GROUP_XN297L}}}"
+    r = f"{{group={GROUP_RAW}}}"
+
     # Serial port: editable list of detected ports
     # The tooltip warns if pyserial is missing (capturing would fail later).
-    tooltip = "Virtual COM port of the dongle (the field is editable, e.g. COM8)"
+    tooltip = "Virtual COM port of the dongle (the field is editable, e.g. COM8). Used in all modes"
     if not pyserial_available():
         tooltip = "WARNING: " + PYSERIAL_HINT.format(exe=sys.executable)
     print("arg {number=0}{call=--port}{display=Serial port}{type=editselector}"
-          f"{{required=true}}{{tooltip={tooltip}}}")
+          f"{{required=true}}{{tooltip={extcap_text(tooltip)}}}{g}")
     for device, description in list_serial_ports():
         print(f"value {{arg=0}}{{value={extcap_text(device)}}}"
               f"{{display={extcap_text(device)} {extcap_text(description)}}}")
 
     print("arg {number=1}{call=--mode}{display=Sync mode}{type=selector}"
-          "{tooltip=address: sync on a known address (robust); "
+          "{tooltip=Used in all modes. address: sync on a known address (robust); "
           "promiscuous: sync on the preamble 71 0F 55 (experimental); "
-          "raw: sync on any 3..5 bytes, no XN297L decoding (unknown transmitters)}")
+          "raw: sync on any 3..5 bytes, no XN297L decoding (unknown transmitters)}" + g)
     print("value {arg=1}{value=address}{display=Known address}{default=true}")
     print("value {arg=1}{value=promiscuous}{display=Promiscuous (preamble)}")
     print("value {arg=1}{value=raw}{display=Raw (any sync word)}")
 
-    print("arg {number=2}{call=--address}{display=Address (TX_ADDR order, hex)}"
-          "{type=string}{default=C1C2C3C4C5}"
-          "{tooltip=As written to the TX_ADDR register, LSByte first; mode 'address' only}")
+    print("arg {number=5}{call=--channels}"
+          "{display=RF channels (0-100, e.g. 2,26,80 or 0-83)}"
+          "{type=string}{default=2,26,80}{placeholder=2,26,80 or 0-83 or 1,20,30,40-83}"
+          f"{{validation={CHANNEL_REGEX}}}"
+          "{tooltip=Used in all modes. Channel = frequency in MHz - 2400, allowed 0..100. "
+          "Single channels and ranges n-m can be mixed, e.g. 1,20,30,40-83. "
+          f"At most {CHANNEL_LIST_MAX} channels in total (firmware limit)}}" + g)
 
-    print("arg {number=3}{call=--address-length}{display=Address length (promiscuous)}"
-          "{type=selector}")
-    for n in (3, 4, 5):
-        default = "{default=true}" if n == 5 else ""
-        print(f"value {{arg=3}}{{value={n}}}{{display={n} bytes}}{default}")
+    print("arg {number=6}{call=--dwell}{display=Dwell time per channel (ms, 0-60000)}"
+          "{type=integer}{range=0,60000}{default=300}"
+          "{tooltip=Used in all modes. Time spent on each channel before hopping to the next. "
+          "0 = stay on the first channel. Allowed 0..60000}" + g)
 
-    print("arg {number=4}{call=--payload-length}{display=Payload length (0 = auto)}"
-          "{type=integer}{range=0,64}{default=0}"
-          "{tooltip=0 = find the length by checking the CRC}")
-
-    print("arg {number=5}{call=--channels}{display=RF channels (MHz - 2400)}"
-          "{type=string}{default=2,26,80}"
-          "{tooltip=Single channels and ranges, e.g. 23 or 2,26,80 or 0-83 (all, needs firmware 1.1)}")
-
-    print("arg {number=6}{call=--dwell}{display=Dwell time per channel (ms)}"
-          "{type=integer}{range=0,60000}{default=300}{tooltip=0 = stay on the first channel}")
-
-    print("arg {number=7}{call=--rate}{display=Data rate}{type=selector}")
+    print("arg {number=7}{call=--rate}{display=Data rate}{type=selector}"
+          "{tooltip=Used in all modes. Air data rate / frequency deviation of the receiver}" + g)
     print("value {arg=7}{value=nrf1m}{display=1 Mbps (nRF)}{default=true}")
     print("value {arg=7}{value=ble1m}{display=1 Mbps (BLE deviation)}")
     print("value {arg=7}{value=nrf2m}{display=2 Mbps (old XN297)}")
 
-    print("arg {number=8}{call=--no-scramble}{display=Scrambler off}{type=boolflag}"
-          "{default=false}")
+    print("arg {number=2}{call=--address}{display=Address (TX_ADDR order, hex) - address mode}"
+          "{type=string}{default=C1C2C3C4C5}{placeholder=C1C2C3C4C5}"
+          "{validation=^\\s*([0-9A-Fa-f][0-9A-Fa-f][:\\s]*)+\\s*$}"
+          "{tooltip=Address mode only. 3, 4 or 5 bytes as hex (6, 8 or 10 digits), "
+          "as written to the TX_ADDR register, LSByte first}" + x)
 
-    print("arg {number=9}{call=--extra-bytes}{display=Extra bytes after the frame}"
+    print("arg {number=3}{call=--address-length}{display=Address length - promiscuous mode}"
+          "{type=selector}"
+          "{tooltip=Promiscuous mode only. Length of the address after the preamble: "
+          "3, 4 or 5 bytes}" + x)
+    for n in (3, 4, 5):
+        default = "{default=true}" if n == 5 else ""
+        print(f"value {{arg=3}}{{value={n}}}{{display={n} bytes}}{default}")
+
+    print("arg {number=4}{call=--payload-length}"
+          "{display=Payload length (0-64, 0 = auto) - address + promiscuous}"
+          "{type=integer}{range=0,64}{default=0}"
+          "{tooltip=Address and promiscuous mode. Allowed 0..64. "
+          "0 = find the length by checking the CRC}" + x)
+
+    print("arg {number=8}{call=--no-scramble}{display=Scrambler off - address + promiscuous}"
+          "{type=boolflag}{default=false}"
+          "{tooltip=Address and promiscuous mode. Tick if the transmitter has its "
+          "scrambler switched off}" + x)
+
+    print("arg {number=9}{call=--extra-bytes}"
+          "{display=Extra bytes after the frame (0-200) - address + promiscuous}"
           "{type=integer}{range=0,200}{default=0}"
-          "{tooltip=Capture this many additional bytes (8 us each at 1 Mbps), e.g. to see an "
-          "acknowledgement sent right after the frame. Total capture is limited to 250 bytes}")
+          "{tooltip=Address and promiscuous mode. Allowed 0..200. Capture this many "
+          "additional bytes (8 us each at 1 Mbps), e.g. to see an "
+          "acknowledgement sent right after the frame. Total capture is limited to 250 bytes}" + x)
 
-    print("arg {number=10}{call=--sync}{display=Sync word (raw mode, hex)}"
-          "{type=string}{default=AAAAAA}"
-          "{tooltip=3..5 bytes in on-air order, MSB first; AAAAAA or 555555 = alternating "
-          "preamble of an unknown transmitter; mode 'raw' only}")
+    print("arg {number=10}{call=--sync}{display=Sync word (hex, 3-5 bytes) - raw mode}"
+          "{type=string}{default=AAAAAA}{placeholder=AAAAAA}"
+          "{validation=^\\s*([0-9A-Fa-f][0-9A-Fa-f][:\\s]*)+\\s*$}"
+          "{tooltip=Raw mode only. 3..5 bytes (6, 8 or 10 hex digits) in on-air order, "
+          "MSB first; AAAAAA or 555555 = alternating "
+          "preamble of an unknown transmitter}" + r)
 
-    print("arg {number=11}{call=--raw-length}{display=Capture length (raw mode)}"
+    print("arg {number=11}{call=--raw-length}{display=Capture length (1-250) - raw mode}"
           "{type=integer}{range=1,250}{default=64}"
-          "{tooltip=Bytes captured after the sync word; mode 'raw' only}")
+          "{tooltip=Raw mode only. Bytes captured after the sync word, allowed 1..250}" + r)
 
 
 class ParentWatchdog:
