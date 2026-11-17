@@ -106,7 +106,8 @@ static void radio_disable_and_wait(void)
 	NRF_RADIO->SHORTS = 0;
 	NRF_RADIO->EVENTS_DISABLED = 0;
 	NRF_RADIO->TASKS_DISABLE = 1;
-	while (NRF_RADIO->EVENTS_DISABLED == 0) {
+	/* Bounded wait: a radio that was never enabled must not hang the firmware. */
+	for (uint32_t i = 0; i < 100000u && NRF_RADIO->EVENTS_DISABLED == 0; i++) {
 		/* busy wait */
 	}
 	NRF_RADIO->EVENTS_DISABLED = 0;
@@ -152,6 +153,7 @@ static void finish_packet(void)
 	uint32_t crc = NRF_RADIO->RXCRC;
 	uint8_t next = (uint8_t)((ring_head + 1u) % RING_SLOTS);
 
+	/* TODO(M2): apply the RSSI filter to advertising packets only; connection packets must never be filtered. */
 	if (rssi < cfg.rssi_min) {
 		return;                                /* advertising RSSI filter */
 	}

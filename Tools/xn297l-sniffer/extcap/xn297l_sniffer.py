@@ -233,6 +233,10 @@ def decode_frame(raw, addr_len: int, payload_len: int = 0, scrambled: bool = Tru
 # Serial link to the dongle
 # ---------------------------------------------------------------------------
 
+# Upper bound of lines kept by Dongle.command(keep=True) (protects against a stalled reader)
+PENDING_MAX = 10000
+
+
 class Dongle:
     """Minimal driver for the line based protocol of the firmware."""
 
@@ -264,24 +268,37 @@ class Dongle:
             pass    # e.g. pseudo terminals without modem lines (tests)
         time.sleep(0.2)
         self.ser.reset_input_buffer()
+        self.pending = []               # lines kept by command(keep=True)
 
-    def command(self, cmd: str, timeout: float = 2.0) -> None:
-        """Send one command and wait for 'OK' (raises on 'E ...')."""
+    def command(self, cmd: str, timeout: float = 2.0, keep: bool = False) -> None:
+        """Send one command and wait for 'OK' (raises on 'E ...').
+
+        Other lines that arrive meanwhile (packets, 'I' lines) are dropped, or,
+        with keep=True, queued so that the next readline() returns them (used
+        while a capture is running, so no packet is lost by a command).
+        """
         self.ser.write((cmd + "\n").encode("ascii"))
         deadline = time.time() + timeout
         while time.time() < deadline:
-            line = self.readline()
+            line = self._read_serial()      # not readline(): it would return kept lines
             if line is None:
                 continue
             if line == "OK":
                 return
             if line.startswith("E "):
                 raise RuntimeError(f"dongle rejected '{cmd}': {line[2:]}")
-            # 'I' lines and late 'P' lines are ignored here
+            if keep and len(self.pending) < PENDING_MAX:
+                self.pending.append(line)
         raise TimeoutError(f"no answer from dongle for '{cmd}'")
 
     def readline(self):
         """Return one line without line ending, or None on timeout."""
+        if self.pending:                # lines kept while a command was waiting
+            return self.pending.pop(0)
+        return self._read_serial()
+
+    def _read_serial(self):
+        """Read one line straight from the port (None on timeout)."""
         raw = self.ser.readline()
         if not raw:
             return None
@@ -790,7 +807,7 @@ def parse_adv_hop(text: str) -> list:
     channels = []
     for entry in text.split(","):
         entry = entry.strip()
-        if not entry.isdigit() or int(entry) not in ADV_CHANNELS:
+        if not (entry.isascii() and entry.isdigit()) or int(entry) not in ADV_CHANNELS:
             raise ValueError(f"'{entry}' is not an advertising channel; use 37, 38 and 39, "
                              "e.g. 37,38,39")
         if int(entry) in channels:
@@ -941,13 +958,13 @@ class ToolbarHandler:
 
     def _set_hop(self, text: str) -> list:
         channels = parse_adv_hop(text)
-        self.dongle.command("bch " + ",".join(str(c) for c in channels))
+        self.dongle.command("bch " + ",".join(str(c) for c in channels), keep=True)
         return [self._status("Advertising hop sequence: " + ",".join(str(c) for c in channels))]
 
     def _set_rssi(self, text: str) -> list:
         value = parse_rssi(text)
         self.session.rssi_min = value                   # host filter ...
-        self.dongle.command(f"brssi {value}")           # ... and the firmware filter
+        self.dongle.command(f"brssi {value}", keep=True)           # ... and the firmware filter
         return [self._status("RSSI filter off" if value == RSSI_OFF
                              else f"RSSI filter {value} dBm")]
 
@@ -955,8 +972,8 @@ class ToolbarHandler:
         """Defaults button: back to all channels, no RSSI filter, all devices."""
         self.follow = "all"
         self.session.rssi_min = RSSI_OFF
-        self.dongle.command("bch " + DEFAULT_ADV_HOP)
-        self.dongle.command(f"brssi {RSSI_OFF}")
+        self.dongle.command("bch " + DEFAULT_ADV_HOP, keep=True)
+        self.dongle.command(f"brssi {RSSI_OFF}", keep=True)
         return [(CTRL_ADV_HOP, self.ctl.CMD_SET, DEFAULT_ADV_HOP),
                 (CTRL_RSSI, self.ctl.CMD_SET, str(RSSI_OFF)),
                 (CTRL_DEVICE, self.ctl.CMD_SET, "all"),

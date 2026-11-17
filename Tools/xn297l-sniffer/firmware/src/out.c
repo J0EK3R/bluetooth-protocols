@@ -29,6 +29,12 @@ void out_enable(bool enable)
 {
 	enabled = enable;
 	ring_buf_reset(&tx_ring);       /* never replay old data to a new host */
+	drops = 0;                      /* nor drops that happened without a host */
+}
+
+bool out_is_enabled(void)
+{
+	return enabled;
 }
 
 bool out_reserve(size_t n)

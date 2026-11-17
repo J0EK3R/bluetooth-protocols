@@ -256,7 +256,7 @@ class RecordingDongle:
         self.commands = []
         self.reject = reject
 
-    def command(self, cmd):
+    def command(self, cmd, timeout=2.0, keep=False):
         self.commands.append(cmd)
         if cmd in self.reject:
             raise RuntimeError(f"dongle rejected '{cmd}': unknown command")
@@ -381,6 +381,88 @@ class ConfigureBleTests(unittest.TestCase):
         self.assertEqual(dongle.commands[0], "stop")
 
 
+class ParserTests(unittest.TestCase):
+    """parse_adv_hop / parse_rssi and their agreement with the regexes sent to Wireshark."""
+
+    def test_adv_hop_valid(self):
+        self.assertEqual(xs.parse_adv_hop("39, 37"), [39, 37])
+        self.assertEqual(xs.parse_adv_hop("37,38,39"), [37, 38, 39])
+
+    def test_adv_hop_invalid(self):
+        for bad in ("37,37", "40", "", "36", "37,", "\u0663\u0667", "\u0663\u0667,38"):
+            with self.assertRaises(ValueError, msg=bad):
+                xs.parse_adv_hop(bad)
+
+    def test_rssi_boundaries(self):
+        self.assertEqual(xs.parse_rssi("-127"), -127)
+        self.assertEqual(xs.parse_rssi("0"), 0)
+        for bad in ("-128", "1", "abc", ""):
+            with self.assertRaises(ValueError, msg=bad):
+                xs.parse_rssi(bad)
+
+    def test_regexes_agree_with_parsers(self):
+        hop = re.compile(xs.ADV_HOP_REGEX)
+        for text in ("37", "39,37", "37,38,39", "40", "36", "", "37,", "37 38", "\u0663\u0667"):
+            try:
+                xs.parse_adv_hop(text)
+                parses = True
+            except ValueError:
+                parses = False
+            # the regex allows duplicates (the parser is stricter), never the other way round
+            if parses:
+                self.assertTrue(hop.match(text), text)
+            if not hop.match(text):
+                self.assertFalse(parses, text)
+        rssi = re.compile(xs.RSSI_REGEX)
+        for value in range(-130, 4):
+            try:
+                xs.parse_rssi(str(value))
+                parses = True
+            except ValueError:
+                parses = False
+            self.assertEqual(bool(rssi.match(str(value))), parses, value)
+
+
+class FakeSerial:
+    """Minimal serial port: hands out scripted lines, records writes."""
+
+    def __init__(self, lines):
+        self.lines = [(l + "\n").encode() for l in lines]
+        self.written = []
+
+    def write(self, data):
+        self.written.append(data)
+
+    def readline(self):
+        return self.lines.pop(0) if self.lines else b""
+
+
+class DongleCommandTests(unittest.TestCase):
+    """Dongle.command must not lose packets that arrive before the answer."""
+
+    def make(self, lines):
+        dongle = xs.Dongle.__new__(xs.Dongle)       # skip opening a real port
+        dongle.ser = FakeSerial(lines)
+        dongle.pending = []
+        return dongle
+
+    def test_keep_returns_interleaved_lines_in_order(self):
+        dongle = self.make(["B 1", "I drop n=3", "B 2", "OK", "B 3"])
+        dongle.command("brssi -80", keep=True)
+        self.assertEqual([dongle.readline() for _ in range(4)], ["B 1", "I drop n=3", "B 2", "B 3"])
+
+    def test_without_keep_lines_are_discarded(self):
+        dongle = self.make(["B 1", "OK", "B 2"])
+        dongle.command("stop")
+        self.assertEqual(dongle.readline(), "B 2")
+
+    def test_toolbar_keeps_packets(self):
+        dongle = self.make(["B 1", "OK", "B 2"])
+        handler = xs.ToolbarHandler(dongle, ble_session.Session(host_start=0.0), ble_control)
+        handler.handle(xs.CTRL_ADV_HOP, ble_control.CMD_SET, b"37")
+        self.assertEqual(dongle.readline(), "B 1")
+
+
 class ToolbarHandlerTests(unittest.TestCase):
     def setUp(self):
         self.dongle = RecordingDongle()
@@ -460,7 +542,7 @@ class ScriptedDongle:
 
     script = []
 
-    def command(self, cmd, timeout=2.0):
+    def command(self, cmd, timeout=2.0, keep=False):
         self.commands.append(cmd)
 
     def readline(self):

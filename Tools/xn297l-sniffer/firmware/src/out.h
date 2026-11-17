@@ -33,6 +33,9 @@ void out_init(const struct device *cdc);
  */
 void out_enable(bool enable);
 
+/* True while a host has the port open (output is accepted). */
+bool out_is_enabled(void);
+
 /* True if at least n bytes can be queued right now (and output is enabled). */
 bool out_reserve(size_t n);
 

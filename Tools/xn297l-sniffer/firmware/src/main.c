@@ -634,12 +634,25 @@ static void report_ble_packet(const struct ble_packet *p)
 /* Tell the host about reports lost in the dongle (queue overflow) or on the way (USB too slow). */
 static void report_drops(void)
 {
+	/* No host: nobody can read the count, so discard it silently. */
+	if (!out_is_enabled()) {
+		(void)out_take_drops();
+		if (mode == MODE_BLE) {
+			(void)ble_radio_take_drops();
+		}
+		return;
+	}
+	/* Only take (and thereby clear) the counters when the line fits, else keep them for later. */
+	if (!out_reserve(REPORT_LINE_MAX)) {
+		return;
+	}
+
 	uint32_t lost = out_take_drops();
 
 	if (mode == MODE_BLE) {
 		lost += ble_radio_take_drops();
 	}
-	if (lost != 0u && out_reserve(REPORT_LINE_MAX)) {
+	if (lost != 0u) {
 		out_str("I drop n=");
 		out_u32(lost);
 		out_str("\n");
@@ -660,8 +673,8 @@ static void report_packets(void)
 		while ((p = ble_radio_peek()) != NULL) {
 			if (out_reserve(REPORT_LINE_MAX)) {
 				report_ble_packet(p);
-			} else {
-				out_note_drop();
+			} else if (out_is_enabled()) {
+				out_note_drop();   /* only a connected host can be told about it */
 			}
 			ble_radio_release();
 			gpio_pin_set_dt(&led_green, 1);
@@ -671,8 +684,8 @@ static void report_packets(void)
 		while (radio_poll(&pkt)) {
 			if (out_reserve(REPORT_LINE_MAX)) {
 				report_packet(&pkt);
-			} else {
-				out_note_drop();
+			} else if (out_is_enabled()) {
+				out_note_drop();   /* only a connected host can be told about it */
 			}
 			gpio_pin_set_dt(&led_green, 1);
 			green_off_ms = k_uptime_get() + 20;
