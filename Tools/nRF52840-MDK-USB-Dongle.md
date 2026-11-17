@@ -4,8 +4,9 @@
 > [GeeekPi nRF52840 MDK USB-Dongle mit Gehäuse](https://www.amazon.de/GeeekPi-nRF52840-MDK-USB-Dongle-Geh%C3%A4use/dp/B07TSJHTSY) (amazon.de, retrieved 2026-11-15).
 > Last updated: 2026-11-15
 
-<img src="img/nrf52840_mdk_usb_dongle.jpg" alt="nRF52840 MDK USB Dongle with case and packaging" height="240">
-<img src="img/nrf52840_mdk_usb_dongle_label.jpg" alt="Back side of the case: nRF52840 MDK USB Dongle, model MDK52840-UD, DC 5V 500mA" height="120">
+<table>
+<tr><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle.jpg" alt="nRF52840 MDK USB Dongle with case and packaging" width="214"></td><td align="center" valign="top"><img src="img/nrf52840_mdk_usb_dongle_label.jpg" alt="Back side of the case: nRF52840 MDK USB Dongle, model MDK52840-UD, DC 5V 500mA" width="558"></td></tr>
+</table>
 
 *Images: product photos from the amazon.de product page, scaled down; see "Image credits" in the
 [main README](../README.md#image-credits).*

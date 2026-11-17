@@ -430,8 +430,9 @@ CRC16 of the Connect telegram above: `0xABD3`.
 
 ### Housing
 
-<img src="img/mk4_housing_top.jpg" alt="Top view of the MK4.0 housing with port labels A, B, C, D, Micro-USB socket and green light pipe" height="360">
-<img src="img/mk4_housing_perspective.jpg" alt="MK4.0 housing seen at an angle, showing the top and a side with pin hole and openings" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mk4_housing_top.jpg" alt="Top view of the MK4.0 housing with port labels A, B, C, D, Micro-USB socket and green light pipe" width="206"></td><td align="center" valign="top"><img src="img/mk4_housing_perspective.jpg" alt="MK4.0 housing seen at an angle, showing the top and a side with pin hole and openings" width="396"></td></tr>
+</table>
 
 *Own photos of the housing. Left: top view with the port labels **A** (top left), **B** (top right), **D** (bottom left) and **C** (bottom right), the Micro-USB socket with the `DC5V` marking above it and a green light pipe (LED or button, not confirmed) below it in the center. Right: housing at an angle, showing the top and a side with a pin hole and openings.*
 
@@ -443,8 +444,9 @@ Part identifications from SMD markings (read from own photos of the receiver boa
 
 ### 8.1 Board
 
-<img src="img/mk4_board_front.jpg" alt="Front side of the MK4.0 receiver board HF-XKL4.0RX" height="360">
-<img src="img/mk4_board_back.jpg" alt="Back side of the MK4.0 receiver board HF-XKL4.0RX" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mk4_board_front.jpg" alt="Front side of the MK4.0 receiver board HF-XKL4.0RX" width="238"></td><td align="center" valign="top"><img src="img/mk4_board_back.jpg" alt="Back side of the MK4.0 receiver board HF-XKL4.0RX" width="216"></td></tr>
+</table>
 
 *Front (left) and back (right) of the receiver board. Front: antenna wire at the top edge, SOP-16 `2148dMC` with the 16.000 MHz crystal at the top, SOP-16 `CC1130T` at the left, push button and Micro-USB socket in the center, 2 SMD LEDs, four SOP-8 ICs, silkscreen `4.0RX` / `2020/04/12` / `HF-XKL4.0RX`, battery wires (red / white / black) at the left, 2-pin headers in the four corners. Back: silkscreen `XKL4.0RX` / `2021/03/12` / `HF-XKL4.0RX`, group of small test pads in the center. Own photos.*
 
@@ -474,8 +476,9 @@ The silkscreen suggests a 2-cell pack with a middle tap: red = `B+`, white = `3.
 | `J3Y` | SOT-23 | NPN transistor (S8050) |
 | `7333` | SOT-23 | 3.3 V LDO regulator (e.g. HT7333) |
 
-<img src="img/mk4_chip_2148dmc.jpg" alt="Close-up of the SOP-16 marked 2148dMC next to the 16.000 MHz crystal" height="360">
-<img src="img/mk4_chip_cc1130t.jpg" alt="Close-up of the SOP-16 marked CC1130T with two 2301 SOT-23 parts" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mk4_chip_2148dmc.jpg" alt="Close-up of the SOP-16 marked 2148dMC next to the 16.000 MHz crystal" width="292"></td><td align="center" valign="top"><img src="img/mk4_chip_cc1130t.jpg" alt="Close-up of the SOP-16 marked CC1130T with two 2301 SOT-23 parts" width="220"></td></tr>
+</table>
 
 *Left: SOP-16 `2148dMC` below the 16.000 MHz crystal (an SOP-8 and a 2-pin header are visible at the bottom). Right: SOP-16 with `W` logo, `CC1130T` and `L1D0C281`, the push button and Micro-USB socket at the right, two `2301` SOT-23 parts below the IC, a `2300` at the bottom, the `2148dMC` and the crystal at the top right. Own photos.*
 

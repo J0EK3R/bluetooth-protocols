@@ -415,8 +415,9 @@ The BC2 image shows the board in a transparent housing with six output connector
 
 ### 8.1 Board and housing
 
-<img src="img/mk6_housing_top.jpg" alt="Top view of the MK6.0 module through the transparent lid" height="360">
-<img src="img/mk6_housing_perspective.jpg" alt="Angled view of the MK6.0 module showing the housing shape" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mk6_housing_top.jpg" alt="Top view of the MK6.0 module through the transparent lid" width="203"></td><td align="center" valign="top"><img src="img/mk6_housing_perspective.jpg" alt="Angled view of the MK6.0 module showing the housing shape" width="325"></td></tr>
+</table>
 
 *Top view (left) and angled view (right) of the module with the lid on. Top view: Mould King logo at the top end, six output sockets (three per long side, each with two rows of 3 pins, counted on a sharper photo of the same module), push button and Micro-USB socket at the bottom edge, board label `JM6.0R` printed twice, `B+` / `B-` marks next to the USB socket. Angled view: housing shape, round brick-stud openings on the lid and round openings in the end wall. Own photos.*
 

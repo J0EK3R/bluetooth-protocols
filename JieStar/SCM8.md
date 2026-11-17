@@ -377,10 +377,10 @@ two main parts, so their function is partly inferred.
 
 ### 8.1 Housing
 
-<img src="img/scm8_housing_perspective.png" alt="JIESTAR SCM8 housing at an angle" height="300">
-<img src="img/scm8_receiver_ports.png" alt="JIESTAR SCM8 receiver, connector side" height="300">
-
-<img src="img/scm8_receiver_overview.png" alt="JIESTAR SCM8 receiver, overview" height="260">
+<table>
+<tr><td align="center" valign="top"><img src="img/scm8_housing_perspective.png" alt="JIESTAR SCM8 housing at an angle" width="315"></td><td align="center" valign="top"><img src="img/scm8_receiver_ports.png" alt="JIESTAR SCM8 receiver, connector side" width="465"></td></tr>
+<tr><td align="center" valign="top" colspan="2"><img src="img/scm8_receiver_overview.png" alt="JIESTAR SCM8 receiver, overview" width="453"></td></tr>
+</table>
 
 *Own photos (straightened, background removed).*
 
@@ -397,11 +397,12 @@ sticks A … D, buttons E … H.
 
 ### 8.2 Board
 
-<img src="img/scm8_board_front.png" alt="Front (component side) of the SCM8 board HF-JX021RX" height="480">
-<img src="img/scm8_board_back.png" alt="Back of the SCM8 board in the housing part" height="480">
-<img src="img/scm8_board_back_battery.png" alt="Back of the board with the battery in the housing part" height="480">
+<table>
+<tr><td align="center" valign="top"><img src="img/scm8_board_front.png" alt="Front (component side) of the SCM8 board HF-JX021RX" width="139"></td><td align="center" valign="top"><img src="img/scm8_board_back.png" alt="Back of the SCM8 board in the housing part" width="641"></td></tr>
+<tr><td align="center" valign="top" colspan="2"><img src="img/scm8_board_back_battery.png" alt="Back of the board with the battery in the housing part" width="593"></td></tr>
+</table>
 
-*Left: front (component side, silkscreen date `2024/8/11`). Middle: back in the case. Right: back with the battery inserted. Own photos.*
+*Top left: front (component side, silkscreen date `2024/8/11`). Top right: back in the case. Bottom: back with the battery inserted. Own photos.*
 
 | Property | Value |
 |---|---|
@@ -413,11 +414,12 @@ sticks A … D, buttons E … H.
 
 ### 8.3 Components
 
-<img src="img/scm8_board_power.jpg" alt="Close-up of the upper board part with USB-C socket, button and power section" height="420">
-<img src="img/scm8_board_rf.jpg" alt="Close-up of the lower board part with MCU, antenna and battery pads" height="420">
-<img src="img/scm8_chip_mcu.jpg" alt="Close-up of the Panchip MCU and the crystal" height="420">
+<table>
+<tr><td align="center" valign="top"><img src="img/scm8_board_power.jpg" alt="Close-up of the upper board part with USB-C socket, button and power section" width="315"></td><td align="center" valign="top"><img src="img/scm8_board_rf.jpg" alt="Close-up of the lower board part with MCU, antenna and battery pads" width="315"></td></tr>
+<tr><td align="center" valign="top" colspan="2"><img src="img/scm8_chip_mcu.jpg" alt="Close-up of the Panchip MCU and the crystal" width="387"></td></tr>
+</table>
 
-*Left: upper part with USB-C socket, button, inductor and Schottky diode. Middle: lower part with MCU, antenna and `B+` / `B-` pads. Right: MCU and crystal. Own photos.*
+*Top left: upper part with USB-C socket, button, inductor and Schottky diode. Top right: lower part with MCU, antenna and `B+` / `B-` pads. Bottom: MCU and crystal. Own photos.*
 
 | Marking | Package | Identification | Confidence |
 |---|---|---|---|

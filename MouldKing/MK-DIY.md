@@ -4,8 +4,9 @@
 > Last updated: 2026-11-17
 > No public description of the DIY protocol was found; everything in section 2 comes from BrickController2 (BC2). Items marked *likely* or *unverified* are inferences.
 
-<img src="img/mkdiy_housing_perspective.png" alt="Mould King DIY module, housing at an angle" height="240">
-<img src="img/mkdiy_board_front.png" alt="Mould King DIY module, board front" height="240">
+<table>
+<tr><td align="center" valign="top"><img src="img/mkdiy_housing_perspective.png" alt="Mould King DIY module, housing at an angle" width="283"></td><td align="center" valign="top"><img src="img/mkdiy_board_front.png" alt="Mould King DIY module, board front" width="123"></td></tr>
+</table>
 
 *Own photos (cropped, background removed); see "Image credits" in the [main README](../README.md#image-credits).*
 
@@ -39,8 +40,9 @@ calculation), **likely** (marking scheme or circuit context), **unknown**.
 
 ### 1.2 Board
 
-<img src="img/mkdiy_board_front.png" alt="Front of the DIY board HF-DL4.0RX" height="360">
-<img src="img/mkdiy_board_back.png" alt="Back of the DIY board in the housing part" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mkdiy_board_front.png" alt="Front of the DIY board HF-DL4.0RX" width="184"></td><td align="center" valign="top"><img src="img/mkdiy_board_back.png" alt="Back of the DIY board in the housing part" width="243"></td></tr>
+</table>
 
 *Left: front (silkscreen date `2021/06/01`). Right: back in the case (`2021/06/02`). Own photos.*
 
@@ -54,8 +56,9 @@ calculation), **likely** (marking scheme or circuit context), **unknown**.
 
 ### 1.3 Components
 
-<img src="img/mkdiy_board_mcu.jpg" alt="Close-up of the upper board part with the JieLi MCU" height="360">
-<img src="img/mkdiy_board_power.jpg" alt="Close-up of the lower board part with the power section" height="360">
+<table>
+<tr><td align="center" valign="top"><img src="img/mkdiy_board_mcu.jpg" alt="Close-up of the upper board part with the JieLi MCU" width="270"></td><td align="center" valign="top"><img src="img/mkdiy_board_power.jpg" alt="Close-up of the lower board part with the power section" width="270"></td></tr>
+</table>
 
 *Left: upper part with the MCU, crystal and antenna. Right: lower part with Micro-USB, inductor, Schottky diodes and the small SOT-23 parts. Own photos.*
 

@@ -28,8 +28,9 @@ operating channels, full-byte stick values with neutral `0x80`.
 
 ## Handset
 
-<img src="img/scm8_remote_front.png" alt="JIESTAR SCM8 handset, front" height="320">
-<img src="img/scm8_remote_top.png" alt="JIESTAR SCM8 handset, top edge with shoulder buttons" height="180">
+<table>
+<tr><td align="center" valign="top"><img src="img/scm8_remote_front.png" alt="JIESTAR SCM8 handset, front" width="349"></td><td align="center" valign="top"><img src="img/scm8_remote_top.png" alt="JIESTAR SCM8 handset, top edge with shoulder buttons" width="431"></td></tr>
+</table>
 
 *Photos: own pictures of the handset (front, and top edge with the four shoulder buttons); straightened, background removed.*
 
