@@ -8,6 +8,15 @@ port and either
   * streams the received frames into Wireshark (extcap mode, DLT_USER0), or
   * prints decoded frames to the console (--print mode).
 
+Two extcap interfaces are offered by this one script:
+
+  xn297l      XN297L / raw GFSK frames, DLT_USER0 (147)        - see below
+  xn297l_ble  Bluetooth LE sniffer, DLT 256 (LE LL with PHDR)  - ble_*.py modules,
+              interface toolbar with device list (extcap control channel)
+
+The BLE interface needs firmware 2.0.0 or newer and the modules ble_phdr.py,
+ble_pdu.py, ble_session.py and ble_control.py next to this script.
+
 All byte values are in ON-AIR ORDER, MSB FIRST, as in Chips/XN297L.md.
 
 Requirements: Python 3.8+, pyserial  (pip install pyserial)
@@ -52,7 +61,7 @@ import struct
 import sys
 import time
 
-__version__ = "1.1.0"
+__version__ = "2.0.0"
 
 # ---------------------------------------------------------------------------
 # XN297L constants and helpers (see Chips/XN297L.md, section 5)
@@ -446,16 +455,24 @@ def pseudo_header(params: dict, ch: int, rssi: int, t_us: int) -> bytes:
 # extcap protocol
 # ---------------------------------------------------------------------------
 
-INTERFACE = "xn297l"
+INTERFACE = "xn297l"                    # XN297L / raw frames, DLT_USER0
+INTERFACE_BLE = "xn297l_ble"            # Bluetooth LE sniffer, DLT 256
+LINKTYPE_BLE_PHDR = 256                 # LINKTYPE_BLUETOOTH_LE_LL_WITH_PHDR
 
 
 def extcap_interfaces() -> None:
     print(f"extcap {{version={__version__}}}{{help=https://github.com/J0EK3R/bluetooth-protocols}}")
     print(f"interface {{value={INTERFACE}}}{{display=XN297L sniffer (nRF52840 dongle)}}")
+    print(f"interface {{value={INTERFACE_BLE}}}{{display=BLE sniffer (nRF52840 dongle)}}")
 
 
-def extcap_dlts() -> None:
-    print(f"dlt {{number={LINKTYPE_USER0}}}{{name=USER0}}{{display=XN297L on-air frames}}")
+def extcap_dlts(interface: str = INTERFACE) -> None:
+    """Print the link type of an interface (Wireshark asks per interface)."""
+    if interface == INTERFACE_BLE:
+        print(f"dlt {{number={LINKTYPE_BLE_PHDR}}}{{name=BLUETOOTH_LE_LL_WITH_PHDR}}"
+              "{display=Bluetooth Low Energy Link Layer with pseudo header}")
+    else:
+        print(f"dlt {{number={LINKTYPE_USER0}}}{{name=USER0}}{{display=XN297L on-air frames}}")
 
 
 def extcap_text(text: str) -> str:
@@ -468,13 +485,18 @@ GROUP_XN297L = "XN297L (address / promiscuous)"
 GROUP_RAW = "Raw mode"
 
 
-def extcap_config() -> None:
+def extcap_config(interface: str = INTERFACE) -> None:
     """Describe the options shown in Wireshark's interface settings dialog.
+
+    The BLE interface has its own options and toolbar (extcap_config_ble()).
 
     The options are grouped into tabs ({group=...}). Argument numbers and
     --call names are stable so saved Wireshark settings stay valid. Labels and
     tooltips say which sync mode uses an option and which values are allowed.
     """
+    if interface == INTERFACE_BLE:
+        extcap_config_ble()
+        return
     g = f"{{group={GROUP_GENERAL}}}"
     x = f"{{group={GROUP_XN297L}}}"
     r = f"{{group={GROUP_RAW}}}"
@@ -727,6 +749,339 @@ def run_print(args) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Bluetooth LE interface (xn297l_ble)
+# ---------------------------------------------------------------------------
+
+GROUP_BLE = "General"
+
+# Argument numbers of the BLE interface (XN297L uses 0..11, these start at 100)
+BLE_ARG_PORT = 100
+BLE_ARG_ONLY_ADV = 101
+BLE_ARG_ADV_HOP = 102
+BLE_ARG_RSSI = 103
+BLE_ARG_DWELL = 104
+
+# Control numbers of the interface toolbar (keep stable: Wireshark stores values by number).
+# 1 and 2 are reserved for the key type / key value controls (decryption, later milestone).
+CTRL_DEVICE = 0
+CTRL_ADV_HOP = 3
+CTRL_RSSI = 4
+CTRL_DEFAULTS = 5
+
+ADV_CHANNELS = (37, 38, 39)
+DEFAULT_ADV_HOP = "37,38,39"
+RSSI_OFF = -127                         # "no RSSI filter" (also the firmware default)
+BLE_DWELL_DEFAULT = 300                 # ms per advertising channel
+FIRMWARE_TOO_OLD = ("The dongle firmware does not support the BLE sniffer (command 'mode ble' "
+                    "rejected). Flash firmware 2.0.0 or newer (firmware/prebuilt/).")
+
+# Regex for the advertising channel list fields: 37, 38, 39 in any order, comma separated
+ADV_HOP_REGEX = r"^\s*3[789](\s*,\s*3[789])*\s*$"
+# Regex for the RSSI threshold: 0 or -1 ... -127
+RSSI_REGEX = r"^\s*(0|-([1-9]|[1-9][0-9]|1[01][0-9]|12[0-7]))\s*$"
+
+
+def parse_adv_hop(text: str) -> list:
+    """Parse the advertising channel hop list, e.g. "37,38,39" or "39,37".
+
+    Only the channel indices 37, 38 and 39 are allowed, each at most once;
+    the order is the hop order. Raises ValueError with a clear message.
+    """
+    channels = []
+    for entry in text.split(","):
+        entry = entry.strip()
+        if not entry.isdigit() or int(entry) not in ADV_CHANNELS:
+            raise ValueError(f"'{entry}' is not an advertising channel; use 37, 38 and 39, "
+                             "e.g. 37,38,39")
+        if int(entry) in channels:
+            raise ValueError(f"advertising channel {entry} is listed twice")
+        channels.append(int(entry))
+    return channels
+
+
+def parse_rssi(text) -> int:
+    """Parse an RSSI threshold in dBm (-127 ... 0, -127 = filter off)."""
+    try:
+        value = int(str(text).strip())
+    except ValueError:
+        raise ValueError(f"RSSI filter '{text}' is not a number (-127 ... 0 dBm)") from None
+    if not RSSI_OFF <= value <= 0:
+        raise ValueError(f"RSSI filter {value} out of range (-127 ... 0 dBm)")
+    return value
+
+
+def extcap_config_ble() -> None:
+    """Options and interface toolbar of the BLE interface.
+
+    Options (Interface Options dialog) are fixed for a capture. The toolbar
+    controls can be changed while capturing; they talk to this script through
+    the extcap control channel (see ble_control.py).
+    """
+    g = f"{{group={GROUP_BLE}}}"
+    tooltip = "Virtual COM port of the dongle (the field is editable, e.g. COM8)"
+    if not pyserial_available():
+        tooltip = "WARNING: " + PYSERIAL_HINT.format(exe=sys.executable)
+    print(f"arg {{number={BLE_ARG_PORT}}}{{call=--port}}{{display=Serial port}}{{type=editselector}}"
+          f"{{required=true}}{{tooltip={extcap_text(tooltip)}}}{g}")
+    for device, description in list_serial_ports():
+        print(f"value {{arg={BLE_ARG_PORT}}}{{value={extcap_text(device)}}}"
+              f"{{display={extcap_text(device)} {extcap_text(description)}}}")
+
+    print(f"arg {{number={BLE_ARG_ONLY_ADV}}}{{call=--only-advertising}}"
+          "{display=Only advertising packets}{type=boolflag}{default=false}"
+          "{tooltip=Capture advertising packets only and never follow a connection}" + g)
+    print(f"arg {{number={BLE_ARG_ADV_HOP}}}{{call=--adv-hop}}"
+          "{display=Advertising channel hop sequence}{type=string}"
+          f"{{default={DEFAULT_ADV_HOP}}}{{placeholder={DEFAULT_ADV_HOP}}}"
+          f"{{validation={ADV_HOP_REGEX}}}"
+          "{tooltip=Advertising channels to scan, in hop order: any of 37, 38, 39 "
+          "separated by commas, e.g. 37,38,39 or 39. Can also be changed in the toolbar}" + g)
+    print(f"arg {{number={BLE_ARG_RSSI}}}{{call=--rssi-filter}}"
+          "{display=RSSI filter (dBm, -127 = off)}{type=integer}{range=-127,0}"
+          f"{{default={RSSI_OFF}}}"
+          "{tooltip=Hide advertising packets weaker than this signal strength. "
+          "-127 switches the filter off. Connection packets are never filtered}" + g)
+    print(f"arg {{number={BLE_ARG_DWELL}}}{{call=--adv-dwell}}"
+          "{display=Dwell time per advertising channel (ms, 0-60000)}{type=integer}"
+          f"{{range=0,60000}}{{default={BLE_DWELL_DEFAULT}}}"
+          "{tooltip=Time spent on each advertising channel before hopping to the next one. "
+          "0 = stay on the first channel}" + g)
+
+    # Interface toolbar
+    print(f"control {{number={CTRL_DEVICE}}}{{type=selector}}{{display=Device}}"
+          "{tooltip=Advertising devices seen recently. Selecting one follows it "
+          "(connection following needs a later firmware version)}")
+    print(f"value {{control={CTRL_DEVICE}}}{{value={'all'}}}"
+          "{display=All advertising devices}{default=true}")
+    print(f"control {{number={CTRL_ADV_HOP}}}{{type=string}}{{display=Adv Hop}}"
+          f"{{default={DEFAULT_ADV_HOP}}}{{validation={ADV_HOP_REGEX}}}"
+          "{tooltip=Advertising channels to scan in hop order, e.g. 37,38,39}")
+    print(f"control {{number={CTRL_RSSI}}}{{type=string}}{{display=RSSI filter}}"
+          f"{{default={RSSI_OFF}}}{{validation={RSSI_REGEX}}}"
+          "{tooltip=Hide advertising packets weaker than this RSSI in dBm (-127 = off)}")
+    print(f"control {{number={CTRL_DEFAULTS}}}{{type=button}}{{role=restore}}{{display=Defaults}}"
+          "{tooltip=Restore the default toolbar settings}")
+
+
+def configure_ble(dongle, args) -> dict:
+    """Send the BLE configuration to the dongle and start the scanner.
+
+    Returns the capture parameters. Raises ValueError for invalid options and
+    RuntimeError (with a clear text) if the firmware is too old.
+    """
+    channels = parse_adv_hop(args.adv_hop)              # validate before touching the dongle
+    rssi_min = parse_rssi(args.rssi_filter)
+    if not 0 <= args.adv_dwell <= 60000:
+        raise ValueError("dwell time must be 0..60000 ms")
+
+    dongle.command("stop")
+    try:
+        dongle.command("mode ble")
+    except RuntimeError as exc:                         # old firmware: unknown command
+        raise RuntimeError(FIRMWARE_TOO_OLD) from exc
+    dongle.command("bch " + ",".join(str(c) for c in channels))
+    dongle.command(f"bdwell {args.adv_dwell}")
+    dongle.command(f"brssi {rssi_min}")
+    dongle.command("badv " + ("on" if args.only_advertising else "off"))
+    dongle.command("start")
+    return {"channels": channels, "rssi_min": rssi_min}
+
+
+class ToolbarHandler:
+    """Reacts to the user input of the interface toolbar.
+
+    Messages arrive as (control, command, payload). The handler talks to the
+    dongle (hop list, RSSI filter), updates the session and returns the
+    messages to send back to Wireshark as (control, command, payload) tuples.
+    """
+
+    def __init__(self, dongle, session, ble_control):
+        self.dongle = dongle
+        self.session = session
+        self.ctl = ble_control          # the ble_control module (constants)
+        self.follow = "all"             # selected device value
+
+    def _status(self, text: str) -> tuple:
+        return (CTRL_DEVICE, self.ctl.CMD_STATUSBAR, text)
+
+    def handle(self, control: int, command: int, payload: bytes) -> list:
+        """Process one message from Wireshark."""
+        text = payload.decode("utf-8", errors="replace").strip()
+        if command == self.ctl.CMD_INITIALIZED:
+            return self.initial_messages()
+        if command != self.ctl.CMD_SET:
+            return []
+        try:
+            if control == CTRL_DEVICE:
+                return self._select_device(text)
+            if control == CTRL_ADV_HOP:
+                return self._set_hop(text)
+            if control == CTRL_RSSI:
+                return self._set_rssi(text)
+            if control == CTRL_DEFAULTS:
+                return self._defaults()
+        except (ValueError, RuntimeError, TimeoutError) as exc:
+            return [self._status(f"Error: {exc}")]
+        return []
+
+    def initial_messages(self) -> list:
+        """Toolbar is ready: announce the devices known so far and the state."""
+        messages = [(CTRL_DEVICE, self.ctl.CMD_ADD, dev.value + "\0" + dev.display)
+                    for dev in self.session.devices.devices.values()]
+        messages.append(self._status("BLE sniffer running"))
+        return messages
+
+    def _select_device(self, value: str) -> list:
+        """Device selector: remember the choice (following is not implemented yet)."""
+        self.follow = value
+        if value == "all":
+            return [self._status("Capturing all advertising devices")]
+        return [self._status(f"Selected {value.split(',')[0]}; following connections "
+                             "is not supported by this firmware version yet")]
+
+    def _set_hop(self, text: str) -> list:
+        channels = parse_adv_hop(text)
+        self.dongle.command("bch " + ",".join(str(c) for c in channels))
+        return [self._status("Advertising hop sequence: " + ",".join(str(c) for c in channels))]
+
+    def _set_rssi(self, text: str) -> list:
+        value = parse_rssi(text)
+        self.session.rssi_min = value                   # host filter ...
+        self.dongle.command(f"brssi {value}")           # ... and the firmware filter
+        return [self._status("RSSI filter off" if value == RSSI_OFF
+                             else f"RSSI filter {value} dBm")]
+
+    def _defaults(self) -> list:
+        """Defaults button: back to all channels, no RSSI filter, all devices."""
+        self.follow = "all"
+        self.session.rssi_min = RSSI_OFF
+        self.dongle.command("bch " + DEFAULT_ADV_HOP)
+        self.dongle.command(f"brssi {RSSI_OFF}")
+        return [(CTRL_ADV_HOP, self.ctl.CMD_SET, DEFAULT_ADV_HOP),
+                (CTRL_RSSI, self.ctl.CMD_SET, str(RSSI_OFF)),
+                (CTRL_DEVICE, self.ctl.CMD_SET, "all"),
+                self._status("Defaults restored")]
+
+
+def device_event_messages(events, ctl) -> list:
+    """Translate session events ('add'/'remove'/'status') into toolbar messages."""
+    messages = []
+    for event in events:
+        if event[0] == "add":
+            messages.append((CTRL_DEVICE, ctl.CMD_ADD, event[1] + "\0" + event[2]))
+        elif event[0] == "remove":
+            messages.append((CTRL_DEVICE, ctl.CMD_REMOVE, event[1]))
+        elif event[0] == "status":
+            messages.append((CTRL_DEVICE, ctl.CMD_STATUSBAR, event[1]))
+    return messages
+
+
+def load_ble_modules():
+    """Import the BLE helper modules from the directory of this script.
+
+    Done lazily so the XN297L interface and the extcap queries work even if the
+    ble_*.py files are missing, and so the script directory is searched first.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        import ble_control
+        import ble_phdr
+        import ble_session
+    except ImportError as exc:
+        sys.stderr.write(f"BLE sniffer modules missing next to {__file__}: {exc}\n"
+                         "Copy ble_phdr.py, ble_pdu.py, ble_session.py and ble_control.py "
+                         "into the same folder as xn297l_sniffer.py.\n")
+        sys.exit(1)
+    return ble_control, ble_phdr, ble_session
+
+
+def run_capture_ble(args) -> None:
+    """Stream BLE packets into the FIFO of Wireshark (DLT 256) and serve the toolbar."""
+    ble_control, ble_phdr, ble_session = load_ble_modules()
+    watchdog = ParentWatchdog()
+    dongle = Dongle(args.port)
+    session = ble_session.Session(parse_rssi(args.rssi_filter))
+    channel = None
+    last_check = last_expire = time.time()
+    try:
+        configure_ble(dongle, args)
+        if args.extcap_control_in and args.extcap_control_out:
+            channel = ble_control.ControlChannel(args.extcap_control_in, args.extcap_control_out)
+            channel.start()
+        handler = ToolbarHandler(dongle, session, ble_control)
+        with open(args.fifo, "wb", buffering=0) as fifo:
+            fifo.write(ble_phdr.pcap_header_256())
+            while True:
+                now = time.time()
+                if now - last_check >= 1.0:
+                    last_check = now
+                    if watchdog.parent_gone():
+                        break
+                if now - last_expire >= 1.0 and channel is not None:
+                    last_expire = now
+                    for msg in device_event_messages(session.device_events_expire(now), ble_control):
+                        channel.send(*msg)
+                if channel is not None:
+                    message = channel.poll()
+                    while message is not None:
+                        for reply in handler.handle(*message):
+                            channel.send(*reply)
+                        message = channel.poll()
+                line = dongle.readline()
+                if line is None:
+                    continue
+                for event in session.handle_line(line, now):
+                    if event[0] == "pcap":
+                        fifo.write(event[1])
+                    elif channel is not None:
+                        for msg in device_event_messages([event], ble_control):
+                            channel.send(*msg)
+    except (BrokenPipeError, OSError, KeyboardInterrupt):
+        pass        # Wireshark stopped the capture (pipe closed)
+    except RuntimeError as exc:
+        sys.stderr.write(f"{exc}\n")
+        if channel is not None:
+            channel.send(CTRL_DEVICE, ble_control.CMD_ERROR, str(exc))
+    finally:
+        if channel is not None:
+            channel.stop()
+        dongle.close()
+
+
+def run_print_ble(args) -> None:
+    """Console mode of the BLE sniffer: one line per packet and the device list."""
+    _, _, ble_session = load_ble_modules()
+    dongle = Dongle(args.port)
+    session = ble_session.Session(parse_rssi(args.rssi_filter))
+    try:
+        configure_ble(dongle, args)
+        print(f"# capturing BLE advertising, channels={args.adv_hop}, "
+              f"rssi filter={args.rssi_filter} (Ctrl+C to stop)", flush=True)
+        while True:
+            line = dongle.readline()
+            if line is None:
+                continue
+            events = session.handle_line(line)
+            for event in events:
+                if event[0] == "pcap":
+                    print(f"{session.unwrapper.last / 1e6:12.6f}s {event[2]}", flush=True)
+                elif event[0] == "add":
+                    print(f"# device {event[2]}", flush=True)
+                elif event[0] == "status":
+                    print(f"# {event[1]}", flush=True)
+            if not events and line.startswith(("I ", "E ")):
+                print("#", line)
+    except RuntimeError as exc:
+        sys.stderr.write(f"{exc}\n")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        dongle.close()
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -735,13 +1090,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     # extcap protocol arguments (called by Wireshark)
     p.add_argument("--extcap-interfaces", action="store_true")
-    p.add_argument("--extcap-interface")
+    p.add_argument("--extcap-interface", "--interface",
+                   help="interface: xn297l (default) or xn297l_ble")
     p.add_argument("--extcap-dlts", action="store_true")
     p.add_argument("--extcap-config", action="store_true")
     p.add_argument("--extcap-version")
     p.add_argument("--extcap-capture-filter")
     p.add_argument("--capture", action="store_true")
     p.add_argument("--fifo")
+    p.add_argument("--extcap-control-in", help="extcap toolbar pipe (Wireshark -> extcap)")
+    p.add_argument("--extcap-control-out", help="extcap toolbar pipe (extcap -> Wireshark)")
 
     # sniffer options (shown in Wireshark, usable on the command line)
     p.add_argument("--port", help="serial port of the dongle, e.g. COM5 or /dev/ttyACM0")
@@ -763,6 +1121,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help="sync word for mode 'raw': 3..5 hex bytes, on-air order, MSB first")
     p.add_argument("--raw-length", type=int, default=64,
                    help="bytes captured after the sync word in mode 'raw' (1..250)")
+
+    # options of the BLE interface (xn297l_ble)
+    p.add_argument("--only-advertising", action="store_true",
+                   help="BLE: capture advertising only, never follow a connection")
+    p.add_argument("--adv-hop", default=DEFAULT_ADV_HOP,
+                   help="BLE: advertising channels in hop order (37,38,39)")
+    p.add_argument("--rssi-filter", default=str(RSSI_OFF),
+                   help="BLE: hide advertising packets below this RSSI in dBm (-127 = off)")
+    p.add_argument("--adv-dwell", type=int, default=BLE_DWELL_DEFAULT,
+                   help="BLE: ms per advertising channel, 0 = stay on the first")
 
     # console mode
     p.add_argument("--print", action="store_true", help="print decoded frames to the console")
@@ -787,11 +1155,12 @@ def main() -> int:
     if args.extcap_interfaces:
         extcap_interfaces()
         return 0
+    interface = args.extcap_interface or INTERFACE
     if args.extcap_dlts:
-        extcap_dlts()
+        extcap_dlts(interface)
         return 0
     if args.extcap_config:
-        extcap_config()
+        extcap_config(interface)
         return 0
     if args.list_ports:
         for device, description in list_serial_ports():
@@ -808,9 +1177,9 @@ def main() -> int:
             if not args.fifo:
                 print("error: --fifo is required for --capture", file=sys.stderr)
                 return 1
-            run_capture(args)
+            (run_capture_ble if interface == INTERFACE_BLE else run_capture)(args)
         else:
-            run_print(args)
+            (run_print_ble if interface == INTERFACE_BLE else run_print)(args)
         return 0
 
     build_parser().print_help()

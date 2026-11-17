@@ -5,7 +5,11 @@ Installation and options: [../README.md](../README.md).
 
 | File | Content |
 |---|---|
-| `xn297l_sniffer.py` | Wireshark extcap interface (streams frames as `DLT_USER0`) **and** console tool (`--print`: prints descrambled, CRC-checked frames; `--mode raw`: prints the bytes after any sync word undecoded). Requires Python 3.8+ and `pyserial` |
+| `xn297l_sniffer.py` | Wireshark extcap with two interfaces: `xn297l` (frames as `DLT_USER0`) and `xn297l_ble` (Bluetooth LE, DLT 256). **Also** console tool (`--print`: prints descrambled, CRC-checked frames; `--mode raw`: prints the bytes after any sync word undecoded; `--interface xn297l_ble`: BLE). Requires Python 3.8+ and `pyserial` |
+| `ble_phdr.py` | pcap file header and records for link type 256, RF channel mapping, pseudo header flags |
+| `ble_pdu.py` | advertising PDU parser (type, advertiser address, name from the AD structures, extended advertising AdvA) |
+| `ble_session.py` | `B`/`I` line parser, 32 bit timestamp unwrap, device table (limit 50, stale after 30 s), RSSI filter, pcap record builder |
+| `ble_control.py` | extcap control channel (interface toolbar): message framing, reader/writer threads |
 | `xn297l_sniffer.bat` | Windows wrapper that runs the Python script with the `py` launcher (Wireshark on Windows needs an executable extcap) |
 
 Example (console mode):
@@ -41,3 +45,20 @@ The RF channel field has a `{validation}` regular expression, so Wireshark marks
 invalid list red (numbers 0..100, ranges, comma separated, spaces tolerated). A regex
 cannot check `n <= m` or the 84 channel limit; `parse_channels()` in the script does
 that before anything is sent to the dongle and exits with a clear error message.
+
+## BLE interface (`xn297l_ble`, firmware 2.0.0 or newer)
+
+Install all `ble_*.py` next to `xn297l_sniffer.py`. Details and Wireshark steps: [../README.md](../README.md#6-bluetooth-le-sniffer).
+
+| Tab | Option (`--call`) | Allowed values |
+|---|---|---|
+| General | Serial port (`--port`) | e.g. `COM8`, `/dev/ttyACM0` |
+| General | Only advertising packets (`--only-advertising`) | on / off |
+| General | Advertising channel hop sequence (`--adv-hop`) | any of 37, 38, 39 in hop order, e.g. `37,38,39` |
+| General | RSSI filter (`--rssi-filter`) | -127 ... 0 dBm, -127 = off |
+| General | Dwell time (`--adv-dwell`) | 0 ... 60000 ms |
+
+Argument numbers 100 ... 104 (the XN297L interface keeps 0 ... 11). Toolbar controls (number: control):
+0 Device (selector, filled at run time), 3 Adv Hop, 4 RSSI filter, 5 Defaults (button, role restore);
+numbers 1 and 2 are reserved for the key controls of the planned decryption support. Toolbar changes are sent to the
+dongle while the capture is running (`bch`, `brssi`).

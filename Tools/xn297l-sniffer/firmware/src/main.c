@@ -18,9 +18,17 @@
  *   rate <r>             nrf1m (default) | ble1m | nrf2m
  *   start                start receiving
  *   stop                 stop receiving
- *   mode <m>             select the receiver backend; "xn297l" (the only one and
- *                        the default after boot) - prepares further backends,
- *                        stops the receiver
+ *   mode <m>             xn297l (default after boot) | ble; selects the receiver
+ *                        backend, stops the receiver
+ *
+ * BLE mode only (backend "ble", see ble_radio.c; commands are accepted in
+ * any mode and stored, they take effect when the BLE receiver is started):
+ *   bch <list>           advertising channels to scan, subset of 37,38,39 in
+ *                        hop order, e.g. "37,38,39" (default)
+ *   bdwell <ms>          time per advertising channel, 0 = stay on the first
+ *   brssi <dBm>          advertising RSSI threshold -127..0 (-127 = off)
+ *   badv on|off          "only advertising": never follow connections
+ *                        (stored; connection following arrives in a later release)
  *
  * Responses (dongle -> host)
  * --------------------------
@@ -30,8 +38,14 @@
  *   P <t_us> <ch> <rssi> <hex>
  *                        received packet: device time in microseconds,
  *                        RF channel, RSSI in dBm, sync word + captured bytes
- *                        as hex (on-air order, MSB first)
- *   I drop n=<count>     reports lost because the USB link was too slow
+ *                        as hex (on-air order, MSB first)   [mode xn297l]
+ *   B <t_us> <ch> <rssi> <phy> <flags> <evt> <hex>                  [mode ble]
+ *                        BLE packet: device time of the packet start in us,
+ *                        BLE channel index 0..39, RSSI in dBm, PHY (1 = LE 1M),
+ *                        flags (hex, bit0 = CRC ok), connection event counter,
+ *                        access address + PDU header + payload + CRC as hex
+ *                        (dewhitened, on-air byte order)
+ *   I drop n=<count>     packets lost because the queue or the USB link was full
  *
  * Output goes through a ring buffer (out.c) and never blocks the receiver.
  *
@@ -50,10 +64,11 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 
+#include "ble_radio.h"
 #include "out.h"
 #include "radio.h"
 
-#define FW_VERSION "1.2.0"
+#define FW_VERSION "2.0.0"
 
 /* ------------------------------------------------------------------------ */
 /* Devices                                                                   */
@@ -87,13 +102,22 @@ static struct radio_config cfg = {
 	.rate = RADIO_RATE_NRF_1M,
 };
 
-/*
- * Receiver backends selectable with the "mode" command. Every backend is
- * started, stopped and polled through the same small interface, so further
- * backends can be added without touching the command loop.
- */
+/* Receiver backends selectable with the "mode" command */
 enum backend_mode {
 	MODE_XN297L = 0,            /* raw XN297L / generic GFSK receiver (radio.c) */
+	MODE_BLE = 1,               /* Bluetooth LE sniffer (ble_radio.c)           */
+};
+
+/*
+ * BLE scanner configuration. Defaults: all three advertising channels,
+ * 300 ms dwell, no RSSI filter. The "b..." commands change it.
+ */
+static struct ble_config ble_cfg = {
+	.channels = { 37, 38, 39 },
+	.channel_count = 3,
+	.dwell_ms = 300,
+	.rssi_min = BLE_RSSI_OFF,
+	.only_adv = false,
 };
 
 static enum backend_mode mode = MODE_XN297L;   /* boots as XN297L sniffer (compatible) */
@@ -211,7 +235,22 @@ static void print_info(void)
 	out_str(" rate=");
 	out_str(rate_name(cfg.rate));
 	out_str(running ? " state=running" : " state=stopped");
-	out_str(" mode=xn297l\n");
+	out_str(mode == MODE_BLE ? " mode=ble caps=ble" : " mode=xn297l caps=ble");
+	if (mode == MODE_BLE) {
+		out_str(" bch=");
+		for (uint8_t i = 0; i < ble_cfg.channel_count; i++) {
+			if (i != 0u) {
+				out_str(",");
+			}
+			out_u32(ble_cfg.channels[i]);
+		}
+		out_str(" bdwell=");
+		out_u32(ble_cfg.dwell_ms);
+		out_str(" brssi=");
+		out_i32(ble_cfg.rssi_min);
+		out_str(ble_cfg.only_adv ? " badv=on" : " badv=off");
+	}
+	out_str("\n");
 }
 
 /* Update the status LEDs: blue = running, red = stopped. */
@@ -224,21 +263,70 @@ static void update_state_leds(void)
 /* Start the receiver of the selected backend. */
 static void backend_start(void)
 {
-	radio_start(&cfg);
+	if (mode == MODE_BLE) {
+		ble_radio_start(&ble_cfg);
+	} else {
+		radio_start(&cfg);
+	}
 }
 
 /* Stop the receiver of the selected backend. */
 static void backend_stop(void)
 {
-	radio_stop();
+	if (mode == MODE_BLE) {
+		ble_radio_stop();
+	} else {
+		radio_stop();
+	}
 }
 
-/* Restart the receiver with the new configuration if it is running. */
-static void apply_config(void)
+/*
+ * Restart the receiver with the new configuration if it is running.
+ * Only a change of the setting of the ACTIVE backend restarts the receiver
+ * (XN297L settings do not disturb a BLE capture and vice versa).
+ */
+static void apply_config(enum backend_mode changed)
 {
-	if (running) {
+	if (running && mode == changed) {
 		backend_start();
 	}
+}
+
+/*
+ * "bch <list>": BLE advertising scan channels, subset of 37,38,39 in hop
+ * order (no duplicates), separated by commas or spaces.
+ */
+static void handle_bch(const char *arg)
+{
+	struct ble_config tmp = ble_cfg;
+	const char *p = arg;
+	uint32_t v;
+
+	tmp.channel_count = 0;
+	while (*p != '\0') {
+		if (!parse_uint(&p, &v) || v < 37u || v > 39u ||
+		    tmp.channel_count >= BLE_ADV_CH_MAX) {
+			out_str("E bch must be a list of 37,38,39 without repeats\n");
+			return;
+		}
+		for (uint8_t i = 0; i < tmp.channel_count; i++) {
+			if (tmp.channels[i] == v) {
+				out_str("E bch must be a list of 37,38,39 without repeats\n");
+				return;
+			}
+		}
+		tmp.channels[tmp.channel_count++] = (uint8_t)v;
+		while (*p == ',' || *p == ' ') {
+			p++;
+		}
+	}
+	if (tmp.channel_count == 0u) {
+		out_str("E bch needs at least one channel\n");
+		return;
+	}
+	ble_cfg = tmp;
+	apply_config(MODE_BLE);
+	out_str("OK\n");
 }
 
 /* Execute one command line. */
@@ -262,7 +350,8 @@ static void handle_command(char *cmd)
 
 	if (strcmp(cmd, "help") == 0) {
 		out_str("I commands: help info start stop sync <hex> len <n> "
-			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m> mode <xn297l>\n");
+			"ch <list, e.g. 2,26,80 or 0-83> dwell <ms> rate <nrf1m|ble1m|nrf2m> "
+			"mode <xn297l|ble> bch <37,38,39> bdwell <ms> brssi <dBm> badv <on|off>\n");
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "info") == 0) {
@@ -291,7 +380,7 @@ static void handle_command(char *cmd)
 		}
 		memcpy(cfg.sync, tmp, (size_t)n);
 		cfg.sync_len = (uint8_t)n;
-		apply_config();
+		apply_config(MODE_XN297L);
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "len") == 0) {
@@ -303,7 +392,7 @@ static void handle_command(char *cmd)
 			return;
 		}
 		cfg.capture_len = (uint8_t)v;
-		apply_config();
+		apply_config(MODE_XN297L);
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "ch") == 0) {
@@ -343,7 +432,7 @@ static void handle_command(char *cmd)
 			return;
 		}
 		cfg = tmp;
-		apply_config();
+		apply_config(MODE_XN297L);
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "dwell") == 0) {
@@ -355,7 +444,7 @@ static void handle_command(char *cmd)
 			return;
 		}
 		cfg.dwell_ms = (uint16_t)v;
-		apply_config();
+		apply_config(MODE_XN297L);
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "rate") == 0) {
@@ -369,12 +458,18 @@ static void handle_command(char *cmd)
 			out_str("E rate must be nrf1m, ble1m or nrf2m\n");
 			return;
 		}
-		apply_config();
+		apply_config(MODE_XN297L);
 		out_str("OK\n");
 
 	} else if (strcmp(cmd, "mode") == 0) {
-		if (strcmp(arg, "xn297l") != 0) {
-			out_str("E mode must be xn297l\n");
+		enum backend_mode m;
+
+		if (strcmp(arg, "xn297l") == 0) {
+			m = MODE_XN297L;
+		} else if (strcmp(arg, "ble") == 0) {
+			m = MODE_BLE;
+		} else {
+			out_str("E mode must be xn297l or ble\n");
 			return;
 		}
 		/* Switching the backend stops the receiver; "start" starts the new one */
@@ -382,8 +477,53 @@ static void handle_command(char *cmd)
 			backend_stop();
 			running = false;
 		}
-		mode = MODE_XN297L;
+		mode = m;
 		update_state_leds();
+		out_str("OK\n");
+
+	} else if (strcmp(cmd, "bch") == 0) {
+		handle_bch(arg);
+
+	} else if (strcmp(cmd, "bdwell") == 0) {
+		const char *p = arg;
+		uint32_t v;
+
+		if (!parse_uint(&p, &v) || v > 60000u) {
+			out_str("E bdwell must be 0..60000 ms\n");
+			return;
+		}
+		ble_cfg.dwell_ms = (uint16_t)v;
+		apply_config(MODE_BLE);
+		out_str("OK\n");
+
+	} else if (strcmp(cmd, "brssi") == 0) {
+		const char *p = arg;
+		uint32_t v;
+
+		/* "-NN" or "NN" (0 = no weaker than 0 dBm, i.e. nearly everything filtered) */
+		bool negative = (*p == '-');
+
+		if (negative) {
+			p++;
+		}
+		if (!parse_uint(&p, &v) || v > 127u || (!negative && v != 0u)) {
+			out_str("E brssi must be -127..0 dBm\n");
+			return;
+		}
+		ble_cfg.rssi_min = negative ? (int8_t)(-(int)v) : 0;
+		apply_config(MODE_BLE);
+		out_str("OK\n");
+
+	} else if (strcmp(cmd, "badv") == 0) {
+		if (strcmp(arg, "on") == 0) {
+			ble_cfg.only_adv = true;
+		} else if (strcmp(arg, "off") == 0) {
+			ble_cfg.only_adv = false;
+		} else {
+			out_str("E badv must be on or off\n");
+			return;
+		}
+		apply_config(MODE_BLE);
 		out_str("OK\n");
 
 	} else {
@@ -425,6 +565,16 @@ static void poll_dtr(void)
 	if (dtr != 0u && !host_connected) {
 		host_connected = true;
 		line_len = 0;
+		/*
+		 * A new host always starts in the compatible XN297L mode: a BLE
+		 * capture of a previous host does not survive the port close.
+		 */
+		if (mode == MODE_BLE) {
+			backend_stop();
+			running = false;
+			mode = MODE_XN297L;
+			update_state_leds();
+		}
 		out_enable(true);
 		out_str("I XN297L sniffer ready\n");
 		print_info();
@@ -434,10 +584,10 @@ static void poll_dtr(void)
 	}
 }
 
-/* Longest report line: "P ..." with 250 captured bytes = about 540 characters. */
+/* Longest report line: "B ..." with 255 byte payload = about 600 characters. */
 #define REPORT_LINE_MAX 640u
 
-/* Send one packet report line. */
+/* Send one XN297L packet report line ("P ..."). */
 static void report_packet(const struct radio_packet *pkt)
 {
 	out_str("P ");
@@ -452,16 +602,83 @@ static void report_packet(const struct radio_packet *pkt)
 	out_str("\n");
 }
 
-/* Tell the host about reports dropped because the USB link was too slow. */
+/* BLE advertising access address in on-air byte order (0x8E89BED6, LSB first). */
+static const uint8_t adv_access_address[4] = { 0xD6, 0xBE, 0x89, 0x8E };
+
+/*
+ * Send one BLE packet report line ("B ...").
+ * hex = access address + PDU header (2) + payload + CRC (3), upper case.
+ */
+static void report_ble_packet(const struct ble_packet *p)
+{
+	out_str("B ");
+	out_u32(p->t_us);
+	out_str(" ");
+	out_u32(p->channel);
+	out_str(" ");
+	out_i32(p->rssi);
+	out_str(" ");
+	out_u32(p->phy);
+	out_str(" ");
+	/* flags as hex without prefix (one or two digits) */
+	out_hex(&p->flags, 1);
+	out_str(" ");
+	out_u32(p->evt);
+	out_str(" ");
+	out_hex(adv_access_address, sizeof(adv_access_address));
+	out_hex(p->raw, 2u + (size_t)p->raw[1]);   /* S0 + LENGTH + payload */
+	out_hex(p->crc, sizeof(p->crc));
+	out_str("\n");
+}
+
+/* Tell the host about reports lost in the dongle (queue overflow) or on the way (USB too slow). */
 static void report_drops(void)
 {
 	uint32_t lost = out_take_drops();
 
+	if (mode == MODE_BLE) {
+		lost += ble_radio_take_drops();
+	}
 	if (lost != 0u && out_reserve(REPORT_LINE_MAX)) {
 		out_str("I drop n=");
 		out_u32(lost);
 		out_str("\n");
 	}
+}
+
+/*
+ * Report all packets that the active backend has finished. A packet is
+ * dropped (and counted) instead of blocking if the output ring is full.
+ */
+static void report_packets(void)
+{
+	static struct radio_packet pkt;   /* static: keep it off the stack */
+
+	if (mode == MODE_BLE) {
+		const struct ble_packet *p;
+
+		while ((p = ble_radio_peek()) != NULL) {
+			if (out_reserve(REPORT_LINE_MAX)) {
+				report_ble_packet(p);
+			} else {
+				out_note_drop();
+			}
+			ble_radio_release();
+			gpio_pin_set_dt(&led_green, 1);
+			green_off_ms = k_uptime_get() + 20;
+		}
+	} else {
+		while (radio_poll(&pkt)) {
+			if (out_reserve(REPORT_LINE_MAX)) {
+				report_packet(&pkt);
+			} else {
+				out_note_drop();
+			}
+			gpio_pin_set_dt(&led_green, 1);
+			green_off_ms = k_uptime_get() + 20;
+		}
+	}
+	report_drops();
 }
 
 /* ------------------------------------------------------------------------ */
@@ -470,7 +687,6 @@ static void report_drops(void)
 
 int main(void)
 {
-	static struct radio_packet pkt;   /* static: keep it off the stack */
 	int64_t last_dtr_check = 0;
 
 	/* LEDs */
@@ -508,20 +724,10 @@ int main(void)
 		}
 
 		/* Received packets (drain everything that is available) */
-		while (radio_poll(&pkt)) {
-			/* never block on a slow host: drop the report if the output ring is full */
-			if (out_reserve(REPORT_LINE_MAX)) {
-				report_packet(&pkt);
-			} else {
-				out_note_drop();
-			}
-			gpio_pin_set_dt(&led_green, 1);
-			green_off_ms = k_uptime_get() + 20;
-		}
+		report_packets();
 
-		/* Hand queued output to the USB stack; report losses to the host */
+		/* Hand queued output to the USB stack */
 		out_flush();
-		report_drops();
 
 		/* Packet LED: short green flash */
 		if (green_off_ms != 0 && k_uptime_get() >= green_off_ms) {
@@ -534,8 +740,10 @@ int main(void)
 		 * RADIO roughly every 60 us (a 40 byte packet takes ~350 us
 		 * at 1 Mbps); while stopped, a slower loop is fine.
 		 */
-		if (running) {
+		if (running && mode == MODE_XN297L) {
 			k_usleep(50);
+		} else if (running) {
+			k_usleep(500);          /* BLE: the RADIO interrupt does the work */
 		} else {
 			k_msleep(5);
 		}

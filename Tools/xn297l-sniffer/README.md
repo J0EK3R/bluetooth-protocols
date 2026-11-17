@@ -4,6 +4,12 @@
 > nRF52840 USB dongle and shows them decoded in Wireshark.
 > Status: **verified on hardware** with a native XN297L transmitter (promiscuous mode, `nrf1m`)
 > and with XN297L frames emulated via BLE advertising (address mode, `ble1m`), see [Status](#status).
+>
+> Since firmware 2.0.0 the same dongle also works as a **Bluetooth LE sniffer** (advertising scan
+> with device list in Wireshark, see [section 6](#6-bluetooth-le-sniffer)); connection following,
+> extended advertising and decryption (feature parity with the nRF Sniffer for Bluetooth LE) are
+> planned in further steps. Status of the BLE part: implemented and unit tested, **not yet tested
+> on hardware**.
 
 A normal Bluetooth dongle cannot receive XN297L transmissions: its controller only
 reports packets with the BLE access address `0x8E89BED6` and a valid CRC-24.
@@ -49,10 +55,11 @@ descrambling and the CRC check are done on the host.
 |---|---|
 | `firmware/` | Zephyr application for the **nRF52840 MDK USB Dongle** (makerdiary) |
 | `firmware/prebuilt/` | ready-to-flash `.uf2` built from this source |
-| `extcap/xn297l_sniffer.py` | Wireshark extcap interface **and** console tool (`--print`) |
+| `extcap/xn297l_sniffer.py` | Wireshark extcap (interfaces `xn297l` and `xn297l_ble`) **and** console tool (`--print`) |
+| `extcap/ble_*.py` | helper modules of the BLE interface (pcap/PHDR output, PDU parser, session and device list, toolbar control channel) |
 | `extcap/xn297l_sniffer.bat` | Windows wrapper for the extcap |
 | `wireshark/xn297l.lua` | Wireshark dissector |
-| `tests/test_decoder.py` | unit tests for the decoder (Python and Lua) |
+| `tests/` | unit tests: XN297L decoder (Python and Lua), BLE host side |
 
 ---
 
@@ -148,7 +155,11 @@ port is open (DTR set). Any terminal program can be used.
 | `dwell <ms>` | time per channel, `0` = stay on the first one | `300` |
 | `rate <r>` | `nrf1m`, `ble1m` (1 Mbps, BLE deviation), `nrf2m` | `nrf1m` |
 | `start` / `stop` | start / stop the receiver | stopped |
-| `mode <m>` | receiver backend, stops the receiver; currently only `xn297l` (firmware 1.2) | `xn297l` |
+| `mode <m>` | receiver backend, stops the receiver: `xn297l` or `ble` (firmware 2.0). After boot and whenever a host opens the port the mode is `xn297l` | `xn297l` |
+| `bch <list>` | BLE: advertising channels to scan, subset of `37,38,39` in hop order (no repeats) | `37,38,39` |
+| `bdwell <ms>` | BLE: time per advertising channel, `0` = stay on the first | `300` |
+| `brssi <dBm>` | BLE: hide advertising packets weaker than this (-127 … 0, -127 = off) | `-127` |
+| `badv on|off` | BLE: "only advertising", never follow connections (stored; no effect before connection following exists) | `off` |
 | `info` / `help` | show configuration / commands | |
 
 Answers: `OK`, `E <error>`, `I <info>` and for every frame
@@ -158,9 +169,26 @@ P <device time µs> <channel> <RSSI dBm> <sync word + captured bytes as hex>
 P 1256623 2 -55 2675882844 09AD4A0CAF8D7A58...
 ```
 
-Since firmware 1.2 the output is queued in a ring buffer and never blocks the receiver; if the host
-reads too slowly, reports are dropped and announced with `I drop n=<count>` (hosts ignore unknown
-`I` lines). `info` additionally shows `mode=xn297l`.
+In BLE mode every packet is reported as
+
+```
+B <t_us> <ch> <rssi> <phy> <flags> <evt> <hex>
+B 4126532 37 -58 1 01 0 D6BE898E4009665544332211020106...ABCDEF
+```
+
+| Field | Meaning |
+|---|---|
+| `t_us` | device time (µs, wraps after 71 min; the host unwraps) of the packet start (first preamble bit) |
+| `ch` | BLE channel index 0 … 39 (37/38/39 = advertising), not the frequency |
+| `rssi` | dBm |
+| `phy` | 1 = LE 1M (2 = 2M, 3/4 = coded, reserved for later releases) |
+| `flags` | hex; bit 0 = CRC ok. Further bits are reserved for connection following (data channel, direction, anchor, gap, aux, truncated) |
+| `evt` | connection event counter (0 for advertising) |
+| `hex` | access address `D6BE898E` + PDU header (2 B) + payload + CRC (3 B), de-whitened, on-air byte order. Packets with a bad CRC are reported too (flag bit 0 = 0) |
+
+Output is queued in a ring buffer and never blocks the receiver; if the host reads too slowly,
+reports are dropped and announced with `I drop n=<count>` (hosts ignore unknown `I` lines).
+`info` additionally shows `mode=xn297l|ble caps=ble` (and the BLE settings in BLE mode).
 
 The XN297L 250 kbps mode is not supported (the nRF52840 has no 250 kbps proprietary mode).
 
@@ -311,7 +339,8 @@ DissectorTable.get("xn297l.address"):add("C1C2C3C4C5", p)
 
 ```bash
 pip install lupa              # optional: also runs the Lua tests
-python tests/test_decoder.py
+cd tests && python3 -m unittest      # all tests, standard library only
+python tests/test_decoder.py         # decoder tests only
 ```
 
 The reference frames are generated with an independent encoder in the BLE/LSB-first
@@ -320,11 +349,76 @@ correctly by both the Python and the Lua decoder (Lua 5.1 … 5.4).
 
 ---
 
+## 6. Bluetooth LE sniffer
+
+With firmware 2.0.0 the dongle can sniff Bluetooth LE without swapping the firmware. A second extcap
+interface **BLE sniffer (nRF52840 dongle)** (`xn297l_ble`) delivers LE packets with link type
+`LINKTYPE_BLUETOOTH_LE_LL_WITH_PHDR` (256), so Wireshark's built-in Bluetooth LE dissector decodes
+them (no Lua plugin needed). The XN297L interface is unchanged.
+
+Compared with the [nRF Sniffer for Bluetooth LE](../nrf-sniffer-ble/README.md) (feature list of 4.1.x):
+
+| Feature | Status |
+|---|---|
+| Advertising on 37/38/39 (LE 1M), RSSI, CRC flag, bad-CRC packets kept | implemented (not yet tested on hardware) |
+| Advertising hop sequence (toolbar *Adv Hop*), RSSI filter, *Defaults*, status bar | implemented |
+| Device list in the toolbar (name, address, RSSI; most recent 50, stale entries removed after 30 s) | implemented |
+| Option *Only advertising packets* | implemented (accepted; nothing to follow yet) |
+| Selecting a device to follow, CONNECT_IND, channel map / hop, CSA #1 and #2, connection update, scan response following | **planned** (selection in the toolbar is accepted and reported as "not supported yet") |
+| Extended advertising (AUX chains), 2M and Coded PHY, *Only legacy advertising* | planned |
+| Decryption (Legacy passkey / OOB, LTK) | planned |
+
+### 6.1 Installation
+
+Same as in [section 3.1](#31-installation), but copy **all** `extcap/*.py` files (the `ble_*.py` modules
+must be in the same folder as `xn297l_sniffer.py`; on Windows also `xn297l_sniffer.bat`) and flash
+the firmware **2.0.0** or newer (`firmware/prebuilt/`). With an older firmware the capture stops with
+the message "does not support the BLE sniffer".
+
+### 6.2 Capturing in Wireshark
+
+1. Plug in the dongle, flash the 2.0.0 UF2 once (section 2.1), close every terminal program on the port.
+2. Start Wireshark (restart it after copying the files). The interface list shows **BLE sniffer
+   (nRF52840 dongle)** with its own toolbar. If it does not, check *Help - About Wireshark - Folders -
+   Extcap path* and try *Capture - Refresh Interfaces*.
+3. Gear icon: set the serial port. Options: *Only advertising packets*, *Advertising channel hop
+   sequence* (default `37,38,39`), *RSSI filter* (default -127 = off), *Dwell time*.
+4. Start the capture (double click). The toolbar *Interface Toolbars - BLE sniffer* shows
+   **Device** (selector; entries `AA:BB:CC:DD:EE:FF "name" -62 dBm` appear while advertising packets
+   arrive), **Adv Hop**, **RSSI filter** and **Defaults**; the status bar shows messages of the sniffer.
+5. Packets appear as *LE LL* with the BLE dissector. Display filters: `btle.advertising_header.pdu_type == 0`
+   (ADV_IND), `btle.advertising_address == 11:22:33:44:55:66`, `btle.length`, `btle.crc`. Bad-CRC packets are
+   marked in the packet details (CRC *incorrect*).
+
+Console mode: `python extcap/xn297l_sniffer.py --print --interface xn297l_ble --port COM5 --adv-hop 37,38,39 --rssi-filter -80`
+prints one line per packet and the devices found. Options: `--only-advertising`, `--adv-hop`, `--rssi-filter`,
+`--adv-dwell`.
+
+### 6.3 Record format (DLT 256)
+
+Per record: a 10 byte pseudo header (RF channel `(f - 2402 MHz) / 2`, signal power, noise power 0,
+access address offenses 0, reference access address, flags) followed by access address + PDU + CRC without
+preamble. Flags set by the sniffer: de-whitened, signal power valid, reference access address valid, CRC
+checked, CRC valid (if the hardware CRC check passed). Packet time = start time of the capture + device time
+since the first packet. Format: <https://www.tcpdump.org/linktypes/LINKTYPE_BLUETOOTH_LE_LL_WITH_PHDR.html>.
+The PHY is not representable in the record except for the PHY bits of the flags (used from the 2M/Coded support on).
+
+### 6.4 Known limits (current release)
+
+- Hardware timing constants (offset of the packet start to the ADDRESS event, RSSI) are not calibrated yet.
+- The CRC bytes of the record are the value of the `RXCRC` register; the *CRC valid* flag is authoritative.
+- The single radio hops over the advertising channels (dwell 300 ms by default): packets of an advertiser on the
+  other two channels are missed like with any single-radio sniffer; choose one channel and a dwell of 0 to
+  watch one channel continuously.
+
+---
+
 ## Status
 
 | Part | Verified |
 |---|---|
-| Firmware build (Zephyr 3.7.0, SDK 0.16.8), UF2 at `0x1000` | ✅ |
+| Firmware build (Zephyr 3.7.0, SDK 0.16.8), UF2 at `0x1000` | ✅ (2.0.0 rebuilt without warnings, 42.8 kB flash, 29.2 kB RAM) |
+| BLE sniffer (firmware 2.0.0, interface `xn297l_ble`): host side, pcap/PHDR, toolbar protocol | unit tests ✅; **not yet tested on hardware / in Wireshark** |
 | Python decoder, Lua decoder (Lua 5.1 … 5.4) against reference frames | ✅ |
 | extcap discovered by Wireshark 4.2, live capture from a simulated dongle, dissector output | ✅ |
 | Mapping of the sync word to `BASE0`/`PREFIX0` (derived from the BLE access address layout) | ✅ on hardware |

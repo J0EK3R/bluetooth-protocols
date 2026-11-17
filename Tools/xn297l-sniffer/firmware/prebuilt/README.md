@@ -1,6 +1,7 @@
 # XN297L sniffer – Prebuilt firmware
 
-Ready-to-flash firmware, built from [../](../README.md) (Zephyr 3.7.0, SDK 0.16.8).
+Ready-to-flash firmware **2.0.0** (XN297L sniffer + BLE sniffer, 86016 bytes), built from [../](../README.md) (Zephyr 3.7.0, SDK 0.16.8).
+Version 1.1.0 (XN297L only, 80896 bytes) is available in the git history.
 
 | File | Content |
 |---|---|
